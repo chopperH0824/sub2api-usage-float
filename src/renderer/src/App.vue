@@ -1,0 +1,427 @@
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {
+  Activity,
+  AlertTriangle,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  CircleCheck,
+  ExternalLink,
+  Pin,
+  RefreshCw,
+  Search,
+  Settings,
+  SlidersHorizontal,
+  Unplug,
+  X
+} from '@lucide/vue'
+import type {
+  AccountSeverity,
+  BootstrapPayload,
+  ConnectResult,
+  ConnectionState,
+  DashboardSnapshot,
+  PublicSettings,
+  Sub2ApiAccount
+} from '@shared/types'
+import { accountSeverity, accountSubtitle, getUsageWindows, platformLabel } from '@shared/usage'
+import { dashboardApi } from './api'
+import AccountCard from './components/AccountCard.vue'
+import ConnectionView from './components/ConnectionView.vue'
+import SettingsPanel from './components/SettingsPanel.vue'
+
+type StatusFilter = 'all' | 'attention' | 'offline'
+type SortMode = 'attention' | 'usage' | 'name'
+
+interface AccountViewModel {
+  account: Sub2ApiAccount
+  severity: AccountSeverity
+  maxUsage: number
+}
+
+const bootstrap = ref<BootstrapPayload | null>(null)
+const snapshot = ref<DashboardSnapshot | null>(null)
+const bootstrapping = ref(true)
+const refreshing = ref(false)
+const refreshError = ref('')
+const settingsOpen = ref(false)
+const now = ref(Date.now())
+const nextRefreshAt = ref(0)
+const searchQuery = ref('')
+const platformFilter = ref('all')
+const statusFilter = ref<StatusFilter>('all')
+const sortMode = ref<SortMode>('attention')
+
+let tickTimer: ReturnType<typeof setInterval> | null = null
+let refreshTimer: ReturnType<typeof setInterval> | null = null
+let removeRefreshListener: (() => void) | null = null
+
+const fallbackSettings: PublicSettings = {
+  serverUrl: '',
+  authMethod: 'api-key',
+  email: '',
+  refreshIntervalSeconds: 60,
+  alwaysOnTop: true,
+  launchAtLogin: false,
+  compactMode: false,
+  opacity: 1,
+  warningThreshold: 75,
+  dangerThreshold: 90,
+  theme: 'system',
+  windowBounds: { width: 468, height: 760 },
+  hasSavedCredential: false,
+  secureStorageAvailable: false
+}
+
+const settings = computed(() => bootstrap.value?.settings || fallbackSettings)
+const connection = computed<ConnectionState>(() => bootstrap.value?.connection || {
+  connected: false,
+  serverUrl: '',
+  authMethod: 'api-key'
+})
+const accounts = computed(() => snapshot.value?.accounts || [])
+
+const platformOptions = computed(() => {
+  const counts = new Map<string, number>()
+  for (const account of accounts.value) counts.set(account.platform, (counts.get(account.platform) || 0) + 1)
+  return [...counts.entries()]
+    .sort((left, right) => platformLabel(left[0]).localeCompare(platformLabel(right[0]), 'zh-CN'))
+    .map(([value, count]) => ({ value, label: platformLabel(value), count }))
+})
+
+const accountModels = computed<AccountViewModel[]>(() => accounts.value.map((account) => {
+  const usage = snapshot.value?.usage[String(account.id)]
+  const windows = getUsageWindows(account, usage)
+  return {
+    account,
+    severity: accountSeverity(
+      account,
+      windows,
+      settings.value.warningThreshold,
+      settings.value.dangerThreshold,
+      now.value
+    ),
+    maxUsage: windows.reduce((max, window) => Math.max(max, window.usedPercent), 0)
+  }
+}))
+
+const severityRank: Record<AccountSeverity, number> = {
+  offline: 0,
+  danger: 1,
+  warning: 2,
+  healthy: 3
+}
+
+const visibleAccounts = computed(() => {
+  const query = searchQuery.value.trim().toLocaleLowerCase('zh-CN')
+  return accountModels.value
+    .filter(({ account, severity }) => {
+      if (platformFilter.value !== 'all' && account.platform !== platformFilter.value) return false
+      if (statusFilter.value === 'offline' && severity !== 'offline') return false
+      if (statusFilter.value === 'attention' && !['danger', 'warning'].includes(severity)) return false
+      if (!query) return true
+      const haystack = [
+        account.name,
+        account.platform,
+        platformLabel(account.platform),
+        accountSubtitle(account, snapshot.value?.usage[String(account.id)])
+      ].join(' ').toLocaleLowerCase('zh-CN')
+      return haystack.includes(query)
+    })
+    .sort((left, right) => {
+      if (sortMode.value === 'name') return left.account.name.localeCompare(right.account.name, 'zh-CN')
+      if (sortMode.value === 'usage') return right.maxUsage - left.maxUsage || left.account.name.localeCompare(right.account.name, 'zh-CN')
+      return severityRank[left.severity] - severityRank[right.severity] ||
+        right.maxUsage - left.maxUsage ||
+        left.account.name.localeCompare(right.account.name, 'zh-CN')
+    })
+})
+
+const summary = computed(() => accountModels.value.reduce((result, item) => {
+  result.total += 1
+  if (item.severity === 'healthy') result.healthy += 1
+  else if (item.severity === 'offline') result.offline += 1
+  else result.attention += 1
+  return result
+}, { total: 0, healthy: 0, attention: 0, offline: 0 }))
+
+const serverHost = computed(() => {
+  try {
+    return new URL(connection.value.serverUrl).host
+  } catch {
+    return connection.value.serverUrl || 'Sub2API'
+  }
+})
+
+const nextRefreshText = computed(() => {
+  if (refreshing.value) return '同步中'
+  if (!nextRefreshAt.value) return '等待同步'
+  const seconds = Math.max(0, Math.ceil((nextRefreshAt.value - now.value) / 1000))
+  return `${seconds}s 后刷新`
+})
+
+function cleanError(value: unknown): string {
+  const message = value instanceof Error ? value.message : String(value)
+  return message.replace(/^Error invoking remote method '[^']+':\s*/, '')
+}
+
+function applyTheme(): void {
+  document.documentElement.dataset.theme = settings.value.theme
+}
+
+function scheduleRefresh(): void {
+  if (refreshTimer) clearInterval(refreshTimer)
+  refreshTimer = null
+  if (!connection.value.connected) return
+  const interval = Math.max(15, settings.value.refreshIntervalSeconds) * 1000
+  nextRefreshAt.value = Date.now() + interval
+  refreshTimer = setInterval(() => {
+    void refreshData(true)
+  }, interval)
+}
+
+async function refreshData(silent = false): Promise<void> {
+  if (refreshing.value || !connection.value.connected) return
+  refreshing.value = true
+  if (!silent) refreshError.value = ''
+  try {
+    snapshot.value = await dashboardApi.refresh(false)
+    refreshError.value = ''
+    nextRefreshAt.value = Date.now() + settings.value.refreshIntervalSeconds * 1000
+  } catch (value) {
+    refreshError.value = cleanError(value)
+  } finally {
+    refreshing.value = false
+  }
+}
+
+async function loadBootstrap(): Promise<void> {
+  bootstrapping.value = true
+  try {
+    bootstrap.value = await dashboardApi.bootstrap()
+    applyTheme()
+    if (connection.value.connected) await refreshData(false)
+    scheduleRefresh()
+  } catch (value) {
+    refreshError.value = cleanError(value)
+  } finally {
+    bootstrapping.value = false
+  }
+}
+
+async function handleConnected(_result: ConnectResult): Promise<void> {
+  bootstrap.value = await dashboardApi.bootstrap()
+  snapshot.value = null
+  refreshError.value = ''
+  await refreshData(false)
+  scheduleRefresh()
+}
+
+async function toggleAlwaysOnTop(): Promise<void> {
+  if (!bootstrap.value) return
+  const value = !settings.value.alwaysOnTop
+  await dashboardApi.setAlwaysOnTop(value)
+  bootstrap.value.settings = { ...settings.value, alwaysOnTop: value }
+}
+
+async function toggleCompactMode(): Promise<void> {
+  if (!bootstrap.value) return
+  const value = !settings.value.compactMode
+  await dashboardApi.setCompactMode(value)
+  bootstrap.value.settings = { ...settings.value, compactMode: value }
+}
+
+async function saveSettings(patch: Partial<PublicSettings>): Promise<void> {
+  if (!bootstrap.value) return
+  bootstrap.value.settings = await dashboardApi.updateSettings(patch)
+  settingsOpen.value = false
+  applyTheme()
+  scheduleRefresh()
+}
+
+async function disconnect(): Promise<void> {
+  bootstrap.value = await dashboardApi.disconnect()
+  snapshot.value = null
+  settingsOpen.value = false
+  scheduleRefresh()
+}
+
+function clearFilters(): void {
+  searchQuery.value = ''
+  platformFilter.value = 'all'
+  statusFilter.value = 'all'
+}
+
+watch(() => settings.value.theme, applyTheme)
+
+onMounted(() => {
+  tickTimer = setInterval(() => { now.value = Date.now() }, 1000)
+  removeRefreshListener = dashboardApi.onRefreshRequested(() => { void refreshData(false) })
+  void loadBootstrap()
+})
+
+onBeforeUnmount(() => {
+  if (tickTimer) clearInterval(tickTimer)
+  if (refreshTimer) clearInterval(refreshTimer)
+  removeRefreshListener?.()
+})
+</script>
+
+<template>
+  <div class="app-shell" :class="{ 'is-compact': settings.compactMode }">
+    <div v-if="bootstrapping" class="boot-screen">
+      <img src="./assets/app-icon.png" alt="" />
+      <span class="spinner spinner--large" />
+    </div>
+
+    <template v-else-if="!connection.connected">
+      <div class="disconnected-drag-region" />
+      <ConnectionView
+        :settings="settings"
+        :initial-error="connection.error || refreshError"
+        @connected="handleConnected"
+      />
+    </template>
+
+    <template v-else>
+      <header class="titlebar">
+        <button type="button" class="titlebar__brand no-drag" title="打开 Sub2API 后台" @click="dashboardApi.openServer">
+          <span class="live-mark"><Activity :size="15" :stroke-width="2.2" /></span>
+          <span class="titlebar__identity">
+            <strong>用量浮窗</strong>
+            <small><i />{{ serverHost }}</small>
+          </span>
+          <ExternalLink :size="11" class="titlebar__external" />
+        </button>
+
+        <div class="titlebar__actions no-drag">
+          <button
+            type="button"
+            class="icon-button"
+            :class="{ 'is-active': settings.alwaysOnTop }"
+            :aria-label="settings.alwaysOnTop ? '取消置顶' : '窗口置顶'"
+            @click="toggleAlwaysOnTop"
+          >
+            <Pin :size="16" :fill="settings.alwaysOnTop ? 'currentColor' : 'none'" />
+          </button>
+          <button
+            type="button"
+            class="icon-button"
+            :aria-label="settings.compactMode ? '展开窗口' : '紧凑模式'"
+            @click="toggleCompactMode"
+          >
+            <ChevronsUpDown v-if="settings.compactMode" :size="16" />
+            <ChevronsDownUp v-else :size="16" />
+          </button>
+          <button type="button" class="icon-button" aria-label="刷新数据" :disabled="refreshing" @click="refreshData(false)">
+            <RefreshCw :size="16" :class="{ 'is-spinning': refreshing }" />
+          </button>
+          <button type="button" class="icon-button" aria-label="看板设置" @click="settingsOpen = true">
+            <Settings :size="16" />
+          </button>
+        </div>
+      </header>
+
+      <section class="summary-band" aria-label="账号概览">
+        <div class="summary-item">
+          <span>账号</span><strong>{{ summary.total }}</strong>
+        </div>
+        <div class="summary-item summary-item--healthy">
+          <span><CircleCheck :size="12" />正常</span><strong>{{ summary.healthy }}</strong>
+        </div>
+        <div class="summary-item summary-item--warning">
+          <span><AlertTriangle :size="12" />关注</span><strong>{{ summary.attention }}</strong>
+        </div>
+        <div class="summary-item summary-item--offline">
+          <span><Unplug :size="12" />阻断</span><strong>{{ summary.offline }}</strong>
+        </div>
+      </section>
+
+      <section class="filter-band">
+        <div class="search-box">
+          <Search :size="15" />
+          <input v-model="searchQuery" type="search" placeholder="搜索账号" aria-label="搜索账号" />
+          <button v-if="searchQuery" type="button" aria-label="清空搜索" @click="searchQuery = ''"><X :size="13" /></button>
+        </div>
+        <div class="filter-row">
+          <div class="segmented-control status-filter" aria-label="状态筛选">
+            <button type="button" :class="{ 'is-active': statusFilter === 'all' }" @click="statusFilter = 'all'">全部</button>
+            <button type="button" :class="{ 'is-active': statusFilter === 'attention' }" @click="statusFilter = 'attention'">告警</button>
+            <button type="button" :class="{ 'is-active': statusFilter === 'offline' }" @click="statusFilter = 'offline'">阻断</button>
+          </div>
+          <label class="select-shell">
+            <span class="sr-only">平台筛选</span>
+            <select v-model="platformFilter">
+              <option value="all">全部平台</option>
+              <option v-for="option in platformOptions" :key="option.value" :value="option.value">
+                {{ option.label }} · {{ option.count }}
+              </option>
+            </select>
+          </label>
+          <label class="select-shell select-shell--sort">
+            <SlidersHorizontal :size="13" />
+            <span class="sr-only">排序方式</span>
+            <select v-model="sortMode">
+              <option value="attention">优先级</option>
+              <option value="usage">用量</option>
+              <option value="name">名称</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <div v-if="refreshError" class="error-banner" role="alert">
+        <AlertTriangle :size="14" />
+        <span>{{ refreshError }}</span>
+        <button type="button" aria-label="关闭错误提示" @click="refreshError = ''"><X :size="13" /></button>
+      </div>
+
+      <main class="account-list">
+        <template v-if="!snapshot && refreshing">
+          <div v-for="index in 3" :key="index" class="account-skeleton">
+            <div class="skeleton-line skeleton-line--title" />
+            <div class="skeleton-line" />
+            <div class="skeleton-track" />
+            <div class="skeleton-line" />
+            <div class="skeleton-track" />
+          </div>
+        </template>
+
+        <template v-else-if="visibleAccounts.length">
+          <AccountCard
+            v-for="item in visibleAccounts"
+            :key="item.account.id"
+            :account="item.account"
+            :usage="snapshot?.usage[String(item.account.id)]"
+            :usage-error="snapshot?.usageErrors[String(item.account.id)]"
+            :now="now"
+            :warning-threshold="settings.warningThreshold"
+            :danger-threshold="settings.dangerThreshold"
+            :compact="settings.compactMode"
+          />
+        </template>
+
+        <div v-else class="empty-state">
+          <Search :size="24" />
+          <strong>没有匹配的账号</strong>
+          <button type="button" class="text-button" @click="clearFilters">清除筛选</button>
+        </div>
+      </main>
+
+      <footer class="statusbar">
+        <span><i :class="{ 'is-refreshing': refreshing }" />{{ nextRefreshText }}</span>
+        <span>{{ snapshot?.serverVersion || connection.serverVersion || 'Sub2API' }}</span>
+      </footer>
+
+      <SettingsPanel
+        :open="settingsOpen"
+        :settings="settings"
+        :connection="connection"
+        @close="settingsOpen = false"
+        @save="saveSettings"
+        @disconnect="disconnect"
+        @open-server="dashboardApi.openServer"
+      />
+    </template>
+  </div>
+</template>

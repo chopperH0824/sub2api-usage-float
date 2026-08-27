@@ -1,0 +1,80 @@
+{
+  "name": "sub2api-usage-float",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sub2API account usage desktop floating dashboard",
+  "main": "./out/main/index.js",
+  "author": "Qiangbin Hu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chopperH0824/sub2api-usage-float.git"
+  },
+  "homepage": "https://github.com/chopperH0824/sub2api-usage-float#readme",
+  "bugs": {
+    "url": "https://github.com/chopperH0824/sub2api-usage-float/issues"
+  },
+  "scripts": {
+    "postinstall": "install-electron",
+    "dev": "electron-vite dev",
+    "dev:web": "vite --config vite.web.config.ts",
+    "build": "npm run typecheck && electron-vite build",
+    "build:mac": "npm run build && electron-builder --mac",
+    "preview": "electron-vite preview",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.node.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@lucide/vue": "^1.34.0",
+    "vue": "^3.5.41"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "electron": "44.0.0",
+    "electron-builder": "26.15.3",
+    "electron-vite": "5.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6",
+    "vitest": "^3.2.4",
+    "vue-tsc": "^3.3.11"
+  },
+  "build": {
+    "appId": "io.github.chopperh0824.sub2api-usage-float",
+    "productName": "Sub2API 用量浮窗",
+    "asar": true,
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/app-icon.png",
+        "to": "app-icon.png"
+      },
+      {
+        "from": "assets/tray-icon.png",
+        "to": "tray-icon.png"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "icon": "build/icon.icns",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "identity": null
+    },
+    "dmg": {
+      "title": "Sub2API 用量浮窗 ${version}",
+      "artifactName": "Sub2API-Usage-Float-${version}-${arch}.${ext}"
+    },
+    "artifactName": "Sub2API-Usage-Float-${version}-${os}-${arch}.${ext}"
+  }
+}
