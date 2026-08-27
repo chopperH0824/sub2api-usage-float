@@ -54,9 +54,10 @@ export class AccountFloatManager {
     return stored
       ? {
           ...stored,
+          displayFields: [...stored.displayFields],
           ...(stored.bounds ? { bounds: { ...stored.bounds } } : {})
         }
-      : { ...DEFAULT_ACCOUNT_FLOAT }
+      : { ...DEFAULT_ACCOUNT_FLOAT, displayFields: [...DEFAULT_ACCOUNT_FLOAT.displayFields] }
   }
 
   async restore(): Promise<void> {
@@ -184,7 +185,7 @@ export class AccountFloatManager {
       minWidth: 230,
       minHeight: 118,
       maxWidth: 460,
-      maxHeight: 340,
+      maxHeight: 560,
       show: false,
       frame: false,
       transparent: true,

@@ -26,6 +26,7 @@ import type {
   Sub2ApiAccount
 } from '@shared/types'
 import { accountSeverity, accountSubtitle, getUsageWindows, platformLabel } from '@shared/usage'
+import { DEFAULT_DISPLAY_FIELDS } from '@shared/display-fields'
 import { dashboardApi } from './api'
 import AccountCard from './components/AccountCard.vue'
 import AccountFloatView from './components/AccountFloatView.vue'
@@ -79,6 +80,7 @@ const fallbackSettings: PublicSettings = {
   dangerThreshold: 90,
   theme: 'system',
   windowBounds: { width: 468, height: 760 },
+  displayFields: [...DEFAULT_DISPLAY_FIELDS],
   accountFloats: {},
   hasSavedCredential: false,
   secureStorageAvailable: false
@@ -247,6 +249,7 @@ async function saveSettings(patch: Partial<PublicSettings>): Promise<void> {
   bootstrap.value.settings = await dashboardApi.updateSettings(patch)
   settingsOpen.value = false
   applyTheme()
+  await refreshData(false)
   scheduleRefresh()
 }
 
@@ -444,6 +447,10 @@ onBeforeUnmount(() => {
             :account="item.account"
             :usage="snapshot?.usage[String(item.account.id)]"
             :usage-error="snapshot?.usageErrors[String(item.account.id)]"
+            :data-error="snapshot?.dataErrors?.[String(item.account.id)]"
+            :today-stats="snapshot?.todayStats?.[String(item.account.id)]"
+            :account-stats="snapshot?.accountStats?.[String(item.account.id)]"
+            :display-fields="settings.displayFields"
             :now="now"
             :warning-threshold="settings.warningThreshold"
             :danger-threshold="settings.dangerThreshold"

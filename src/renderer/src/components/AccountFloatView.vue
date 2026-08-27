@@ -17,23 +17,28 @@ import {
   X
 } from '@lucide/vue'
 import { DEFAULT_ACCOUNT_FLOAT } from '@shared/account-floats'
+import { CAPACITY_DISPLAY_FIELDS } from '@shared/display-fields'
 import type {
+  AccountDetailItem,
   AccountFloatPreference,
   AccountFloatSize,
   BootstrapPayload,
   CapacityMetric,
-  DashboardSnapshot
+  DashboardSnapshot,
+  DisplayFieldId
 } from '@shared/types'
 import {
   accountSeverity,
   accountSubtitle,
   getCapacityMetrics,
   getUsageWindows,
-  platformLabel,
   runtimeBlocked
 } from '@shared/usage'
+import { getAccountDetailGroups, getTodayDisplayItems } from '@shared/account-details'
 import { dashboardApi } from '../api'
 import { formatCapacityValue, formatUpdatedTime } from '../formatters'
+import AccountDetails from './AccountDetails.vue'
+import DisplayFieldPicker from './DisplayFieldPicker.vue'
 import UsageBar from './UsageBar.vue'
 
 const props = defineProps<{ accountId: number }>()
@@ -48,18 +53,47 @@ const error = ref('')
 
 let tickTimer: ReturnType<typeof setInterval> | null = null
 let opacityTimer: ReturnType<typeof setTimeout> | null = null
+let fieldsRefreshTimer: ReturnType<typeof setTimeout> | null = null
 let removeDashboardListener: (() => void) | null = null
 let removeSettingsListener: (() => void) | null = null
 
 const preference = computed<AccountFloatPreference>(() => {
-  return bootstrap.value?.settings.accountFloats[String(props.accountId)] || { ...DEFAULT_ACCOUNT_FLOAT, open: true }
+  return bootstrap.value?.settings.accountFloats[String(props.accountId)] || {
+    ...DEFAULT_ACCOUNT_FLOAT,
+    displayFields: [...DEFAULT_ACCOUNT_FLOAT.displayFields],
+    open: true
+  }
 })
+const selected = computed(() => new Set(preference.value.displayFields))
 const account = computed(() => snapshot.value?.accounts.find((item) => item.id === props.accountId))
 const usage = computed(() => snapshot.value?.usage[String(props.accountId)])
+const todayStats = computed(() => snapshot.value?.todayStats?.[String(props.accountId)])
+const accountStats = computed(() => snapshot.value?.accountStats?.[String(props.accountId)])
 const windows = computed(() => account.value ? getUsageWindows(account.value, usage.value) : [])
-const visibleWindowCount = computed(() => ({ small: 2, medium: 3, large: 4 })[preference.value.size])
-const visibleWindows = computed(() => windows.value.slice(0, visibleWindowCount.value))
-const capacities = computed<CapacityMetric[]>(() => account.value ? getCapacityMetrics(account.value).slice(0, 3) : [])
+const visibleWindowCount = computed(() => ({ small: 2, medium: 4, large: Number.POSITIVE_INFINITY })[preference.value.size])
+const visibleWindows = computed(() => selected.value.has('usage-windows')
+  ? windows.value.slice(0, visibleWindowCount.value)
+  : [])
+const capacities = computed<CapacityMetric[]>(() => account.value
+  ? getCapacityMetrics(account.value).filter((metric) => {
+      const field = CAPACITY_DISPLAY_FIELDS[metric.id]
+      return field ? selected.value.has(field) : false
+    })
+  : [])
+const todayItems = computed(() => getTodayDisplayItems(todayStats.value, preference.value.displayFields))
+const detailGroups = computed(() => account.value
+  ? getAccountDetailGroups(account.value, usage.value, accountStats.value, preference.value.displayFields)
+  : [])
+const facts = computed<AccountDetailItem[]>(() => [
+  ...capacities.value.map((metric) => ({
+    id: `capacity-${metric.id}`,
+    label: metric.label,
+    value: formatCapacityValue(metric),
+    tone: capacityTone(metric) as AccountDetailItem['tone']
+  })),
+  ...todayItems.value
+])
+const hasDisplayData = computed(() => visibleWindows.value.length > 0 || facts.value.length > 0 || detailGroups.value.length > 0)
 const severity = computed(() => account.value
   ? accountSeverity(
       account.value,
@@ -76,6 +110,9 @@ const accountMessage = computed(() => {
     usage.value?.error ||
     account.value.error_message ||
     account.value.temp_unschedulable_reason ||
+    (snapshot.value?.dataErrors?.[String(props.accountId)]?.includes('当前服务器版本不支持')
+      ? ''
+      : snapshot.value?.dataErrors?.[String(props.accountId)]) ||
     ''
 })
 const opacityLabel = computed(() => `${Math.round(preference.value.opacity * 100)}%`)
@@ -99,7 +136,7 @@ const latestUpdatedAt = computed(() => {
     .filter((value): value is string => Boolean(value))
     .map((value) => new Date(value).getTime())
     .filter(Number.isFinite)
-  if (!values.length) return undefined
+  if (!values.length) return usage.value?.updated_at || snapshot.value?.fetchedAt
   return new Date(Math.max(...values)).toISOString()
 })
 
@@ -147,6 +184,16 @@ async function updatePreference(patch: Partial<AccountFloatPreference>): Promise
 
 async function selectSize(size: AccountFloatSize): Promise<void> {
   await updatePreference({ size })
+}
+
+function selectDisplayFields(displayFields: DisplayFieldId[]): void {
+  const next = [...displayFields]
+  setLocalPreference({ ...preference.value, displayFields: next })
+  if (fieldsRefreshTimer) clearTimeout(fieldsRefreshTimer)
+  fieldsRefreshTimer = setTimeout(() => {
+    fieldsRefreshTimer = null
+    void updatePreference({ displayFields: next }).then(() => refresh())
+  }, 180)
 }
 
 function queueOpacity(value: number): void {
@@ -215,6 +262,7 @@ onBeforeUnmount(() => {
   document.documentElement.classList.remove('is-account-float')
   if (tickTimer) clearInterval(tickTimer)
   if (opacityTimer) clearTimeout(opacityTimer)
+  if (fieldsRefreshTimer) clearTimeout(fieldsRefreshTimer)
   removeDashboardListener?.()
   removeSettingsListener?.()
 })
@@ -256,56 +304,76 @@ onBeforeUnmount(() => {
     </header>
 
     <div v-if="settingsOpen" class="account-float__settings no-drag">
-      <label class="account-float__range">
-        <span>透明度</span>
-        <input
-          :value="preference.opacity"
-          type="range"
-          min="0.45"
-          max="1"
-          step="0.01"
-          @input="handleOpacityInput"
-        />
-        <strong>{{ opacityLabel }}</strong>
-      </label>
-      <div class="account-float__setting-row">
-        <span>尺寸</span>
-        <div class="segmented-control account-float__sizes" aria-label="浮窗尺寸">
-          <button type="button" :class="{ 'is-active': preference.size === 'small' }" @click="selectSize('small')">小</button>
-          <button type="button" :class="{ 'is-active': preference.size === 'medium' }" @click="selectSize('medium')">中</button>
-          <button type="button" :class="{ 'is-active': preference.size === 'large' }" @click="selectSize('large')">大</button>
+      <div class="account-float__settings-controls">
+        <label class="account-float__range">
+          <span>透明度</span>
+          <input
+            :value="preference.opacity"
+            type="range"
+            min="0.45"
+            max="1"
+            step="0.01"
+            @input="handleOpacityInput"
+          />
+          <strong>{{ opacityLabel }}</strong>
+        </label>
+        <div class="account-float__setting-row">
+          <span>尺寸</span>
+          <div class="segmented-control account-float__sizes" aria-label="浮窗尺寸">
+            <button type="button" :class="{ 'is-active': preference.size === 'small' }" @click="selectSize('small')">小</button>
+            <button type="button" :class="{ 'is-active': preference.size === 'medium' }" @click="selectSize('medium')">中</button>
+            <button type="button" :class="{ 'is-active': preference.size === 'large' }" @click="selectSize('large')">大</button>
+          </div>
         </div>
       </div>
+      <DisplayFieldPicker
+        :model-value="preference.displayFields"
+        :default-fields="[...DEFAULT_ACCOUNT_FLOAT.displayFields]"
+        compact
+        @update:model-value="selectDisplayFields"
+      />
     </div>
 
     <template v-else>
       <div v-if="loading" class="account-float__loading"><span class="spinner" /></div>
       <div v-else-if="account" class="account-float__content">
+        <p v-if="accountMessage" class="account-float__message" :title="accountMessage">{{ accountMessage }}</p>
+
         <div v-if="visibleWindows.length" class="account-float__usage">
           <UsageBar
             v-for="window in visibleWindows"
             :key="window.id"
             :window="window"
             :now="now"
+            :display-fields="preference.displayFields"
             :warning-threshold="bootstrap?.settings.warningThreshold || 75"
             :danger-threshold="bootstrap?.settings.dangerThreshold || 90"
           />
         </div>
-        <div v-else class="account-float__empty" :title="accountMessage || '暂无窗口数据'">
-          {{ accountMessage || '暂无窗口数据' }}
+
+        <div v-if="facts.length" class="account-float__facts">
+          <span
+            v-for="entry in facts"
+            :key="entry.id"
+            :class="entry.tone ? `is-${entry.tone}` : ''"
+            :title="`${entry.label} ${entry.value}`"
+          >
+            {{ entry.label }} <strong>{{ entry.value }}</strong>
+          </span>
         </div>
 
-        <footer class="account-float__footer">
-          <div v-if="capacities.length" class="account-float__capacities">
-            <span
-              v-for="metric in capacities"
-              :key="metric.id"
-              :class="`is-${capacityTone(metric)}`"
-              :title="`${metric.label} ${formatCapacityValue(metric)}`"
-            >
-              {{ metric.label }} <strong>{{ formatCapacityValue(metric) }}</strong>
-            </span>
-          </div>
+        <AccountDetails
+          v-if="detailGroups.length"
+          :groups="detailGroups"
+          :compact="preference.size === 'small'"
+        />
+
+        <div v-if="!hasDisplayData" class="account-float__empty">
+          {{ accountMessage || '未选择可用数据项' }}
+        </div>
+
+        <footer v-if="selected.has('usage-sample')" class="account-float__footer">
+          <span>{{ usage?.source === 'passive' ? '被动采样' : usage?.source === 'active' ? '主动采样' : '本地快照' }}</span>
           <span class="account-float__updated">{{ formatUpdatedTime(latestUpdatedAt, now) }}</span>
         </footer>
       </div>

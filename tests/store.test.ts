@@ -17,6 +17,7 @@ vi.mock('electron', () => ({
 }))
 
 import { AppStore } from '../src/main/store'
+import { DEFAULT_DISPLAY_FIELDS } from '../src/shared/display-fields'
 
 beforeEach(async () => {
   electronState.userData = await mkdtemp(join(tmpdir(), 'sub2api-float-store-'))
@@ -42,6 +43,7 @@ describe('AppStore account floats', () => {
     await store.load()
 
     expect(store.getSettings().serverUrl).toBe('https://sub2api.example.com')
+    expect(store.getSettings().displayFields).toEqual(DEFAULT_DISPLAY_FIELDS)
     expect(store.getSettings().accountFloats).toEqual({})
   })
 
@@ -53,6 +55,7 @@ describe('AppStore account floats', () => {
       open: true,
       opacity: 0.2,
       size: 'large',
+      displayFields: ['usage-windows', 'period-summary', 'invalid-field' as never],
       bounds: { x: 120, y: 80, width: 900, height: 20 }
     })
     await store.updateAccountFloat(8, {
@@ -66,6 +69,7 @@ describe('AppStore account floats', () => {
       open: true,
       opacity: 0.45,
       size: 'large',
+      displayFields: ['usage-windows', 'period-summary'],
       bounds: { x: 120, y: 80, width: 460, height: 118 }
     })
     expect(store.getSettings().accountFloats['7'].open).toBe(true)

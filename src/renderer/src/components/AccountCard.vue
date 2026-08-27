@@ -2,23 +2,33 @@
 import { computed, ref } from 'vue'
 import {
   Activity,
+  Binary,
   Boxes,
   BrainCircuit,
+  ChevronDown,
   CircleDollarSign,
   Clock3,
   Cloud,
   Gauge,
   Gem,
   Layers3,
+  ListChecks,
   Orbit,
   PictureInPicture2,
   Radar,
   Sparkles,
   UsersRound,
-  Zap,
-  ChevronDown
+  Zap
 } from '@lucide/vue'
-import type { AccountUsageInfo, CapacityMetric, Sub2ApiAccount } from '@shared/types'
+import { CAPACITY_DISPLAY_FIELDS } from '@shared/display-fields'
+import type {
+  AccountUsageInfo,
+  AccountUsageStatsResponse,
+  CapacityMetric,
+  DisplayFieldId,
+  Sub2ApiAccount,
+  WindowStats
+} from '@shared/types'
 import {
   accountSeverity,
   accountSubtitle,
@@ -27,13 +37,19 @@ import {
   platformLabel,
   runtimeBlocked
 } from '@shared/usage'
+import { getAccountDetailGroups, getTodayDisplayItems } from '@shared/account-details'
 import { accountLastSeen, formatCapacityValue, formatUpdatedTime } from '../formatters'
+import AccountDetails from './AccountDetails.vue'
 import UsageBar from './UsageBar.vue'
 
 const props = defineProps<{
   account: Sub2ApiAccount
   usage?: AccountUsageInfo | null
   usageError?: string
+  dataError?: string
+  todayStats?: WindowStats | null
+  accountStats?: AccountUsageStatsResponse | null
+  displayFields: DisplayFieldId[]
   now: number
   warningThreshold: number
   dangerThreshold: number
@@ -46,8 +62,19 @@ const emit = defineEmits<{
 }>()
 
 const expanded = ref(false)
+const selected = computed(() => new Set(props.displayFields))
 const windows = computed(() => getUsageWindows(props.account, props.usage))
-const capacities = computed(() => getCapacityMetrics(props.account))
+const capacities = computed(() => getCapacityMetrics(props.account).filter((metric) => {
+  const field = CAPACITY_DISPLAY_FIELDS[metric.id]
+  return field ? selected.value.has(field) : false
+}))
+const todayItems = computed(() => getTodayDisplayItems(props.todayStats, props.displayFields))
+const detailGroups = computed(() => getAccountDetailGroups(
+  props.account,
+  props.usage,
+  props.accountStats,
+  props.displayFields
+))
 const severity = computed(() => accountSeverity(
   props.account,
   windows.value,
@@ -56,10 +83,15 @@ const severity = computed(() => accountSeverity(
   props.now
 ))
 const maxVisibleWindows = computed(() => props.compact ? 2 : 3)
-const visibleWindows = computed(() => expanded.value
-  ? windows.value
-  : windows.value.slice(0, maxVisibleWindows.value))
-const hiddenWindowCount = computed(() => Math.max(0, windows.value.length - maxVisibleWindows.value))
+const visibleWindows = computed(() => {
+  if (!selected.value.has('usage-windows')) return []
+  return expanded.value ? windows.value : windows.value.slice(0, maxVisibleWindows.value)
+})
+const hiddenWindowCount = computed(() => selected.value.has('usage-windows')
+  ? Math.max(0, windows.value.length - maxVisibleWindows.value)
+  : 0)
+const detailItemCount = computed(() => detailGroups.value.reduce((count, group) => count + group.items.length, 0))
+const expandableCount = computed(() => hiddenWindowCount.value + detailItemCount.value)
 
 const platformIcons: Record<string, unknown> = {
   anthropic: Sparkles,
@@ -100,6 +132,7 @@ const cardMessage = computed(() => {
   if (props.usage?.error) return props.usage.error
   if (props.account.error_message) return props.account.error_message
   if (props.account.temp_unschedulable_reason) return props.account.temp_unschedulable_reason
+  if (props.dataError && !props.dataError.includes('当前服务器版本不支持')) return props.dataError
   return ''
 })
 
@@ -109,6 +142,12 @@ function capacityIcon(metric: CapacityMetric): unknown {
   if (metric.id === 'sessions') return UsersRound
   if (metric.unit === '$') return CircleDollarSign
   return Gauge
+}
+
+function todayIcon(id: string): unknown {
+  if (id === 'today-requests') return ListChecks
+  if (id === 'today-tokens') return Binary
+  return CircleDollarSign
 }
 
 function capacityTone(metric: CapacityMetric): string {
@@ -160,34 +199,46 @@ function capacityTone(metric: CapacityMetric): string {
       </span>
     </div>
 
+    <div v-if="todayItems.length" class="today-strip" aria-label="今日统计">
+      <span v-for="entry in todayItems" :key="entry.id" class="today-chip" :title="`${entry.label} ${entry.value}`">
+        <component :is="todayIcon(entry.id)" :size="11" :stroke-width="2" />
+        <span>{{ entry.label }}</span>
+        <strong>{{ entry.value }}</strong>
+      </span>
+    </div>
+
     <div v-if="visibleWindows.length" class="usage-stack">
       <UsageBar
         v-for="window in visibleWindows"
         :key="window.id"
         :window="window"
         :now="now"
+        :display-fields="displayFields"
         :warning-threshold="warningThreshold"
         :danger-threshold="dangerThreshold"
       />
     </div>
-    <div v-else class="account-card__empty-window">
+    <div v-else-if="selected.has('usage-windows')" class="account-card__empty-window">
       <span>暂无窗口数据</span>
       <span>{{ accountLastSeen(account.last_used_at, now) }}</span>
     </div>
 
-    <footer class="account-card__footer">
-      <span class="sample-state">
+    <AccountDetails v-if="expanded" :groups="detailGroups" />
+
+    <footer v-if="selected.has('usage-sample') || expandableCount" class="account-card__footer">
+      <span v-if="selected.has('usage-sample')" class="sample-state">
         <i :class="{ 'sample-state__dot--passive': usage?.source === 'passive' }" aria-hidden="true" />
         {{ formatUpdatedTime(latestUpdatedAt, now) }}
       </span>
+      <span v-else />
       <button
-        v-if="hiddenWindowCount > 0"
+        v-if="expandableCount > 0"
         type="button"
         class="expand-button"
         :aria-expanded="expanded"
         @click="expanded = !expanded"
       >
-        {{ expanded ? '收起' : `更多 ${hiddenWindowCount}` }}
+        {{ expanded ? '收起' : `详情 ${expandableCount}` }}
         <ChevronDown :size="13" :class="{ 'is-rotated': expanded }" />
       </button>
     </footer>

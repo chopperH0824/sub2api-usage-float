@@ -10,6 +10,11 @@ import type {
   WindowBounds
 } from '@shared/types'
 import { DEFAULT_ACCOUNT_FLOAT, isAccountFloatSize } from '@shared/account-floats'
+import {
+  DEFAULT_DISPLAY_FIELDS,
+  DEFAULT_FLOAT_DISPLAY_FIELDS,
+  normalizeDisplayFields
+} from '@shared/display-fields'
 
 type CredentialKind = 'api-key' | 'refresh-token' | 'access-token'
 
@@ -42,6 +47,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   dangerThreshold: 90,
   theme: 'system',
   windowBounds: DEFAULT_BOUNDS,
+  displayFields: [...DEFAULT_DISPLAY_FIELDS],
   accountFloats: {}
 }
 
@@ -75,7 +81,7 @@ function sanitizeFloatBounds(value: unknown): WindowBounds | undefined {
   const candidate = value as Partial<WindowBounds>
   const result: WindowBounds = {
     width: clampNumber(candidate.width, 230, 460, 260),
-    height: clampNumber(candidate.height, 118, 340, 126)
+    height: clampNumber(candidate.height, 118, 560, 126)
   }
   if (Number.isFinite(candidate.x)) result.x = Number(candidate.x)
   if (Number.isFinite(candidate.y)) result.y = Number(candidate.y)
@@ -92,6 +98,7 @@ function sanitizeAccountFloat(value: unknown): AccountFloatPreference {
       ? candidate.alwaysOnTop
       : DEFAULT_ACCOUNT_FLOAT.alwaysOnTop,
     size: isAccountFloatSize(candidate.size) ? candidate.size : DEFAULT_ACCOUNT_FLOAT.size,
+    displayFields: normalizeDisplayFields(candidate.displayFields, DEFAULT_FLOAT_DISPLAY_FIELDS),
     ...(bounds ? { bounds } : {})
   }
 }
@@ -127,6 +134,7 @@ function sanitizeSettings(value: unknown): AppSettings {
     dangerThreshold,
     theme: isTheme(input.theme) ? input.theme : DEFAULT_SETTINGS.theme,
     windowBounds: sanitizeBounds(input.windowBounds),
+    displayFields: normalizeDisplayFields(input.displayFields),
     accountFloats: sanitizeAccountFloats(input.accountFloats)
   }
 }
@@ -144,7 +152,12 @@ function isCredential(value: unknown): value is PersistedCredential {
 export class AppStore {
   private state: PersistedState = {
     version: 1,
-    settings: { ...DEFAULT_SETTINGS, windowBounds: { ...DEFAULT_BOUNDS }, accountFloats: {} }
+    settings: {
+      ...DEFAULT_SETTINGS,
+      windowBounds: { ...DEFAULT_BOUNDS },
+      displayFields: [...DEFAULT_DISPLAY_FIELDS],
+      accountFloats: {}
+    }
   }
 
   private readonly filePath = join(app.getPath('userData'), 'settings.json')
@@ -170,11 +183,13 @@ export class AppStore {
     return {
       ...this.state.settings,
       windowBounds: { ...this.state.settings.windowBounds },
+      displayFields: [...this.state.settings.displayFields],
       accountFloats: Object.fromEntries(
         Object.entries(this.state.settings.accountFloats).map(([key, preference]) => [
           key,
           {
             ...preference,
+            displayFields: [...preference.displayFields],
             ...(preference.bounds ? { bounds: { ...preference.bounds } } : {})
           }
         ])

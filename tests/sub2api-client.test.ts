@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net'
 import type { AppSettings } from '../src/shared/types'
 import { normalizeServerUrl, Sub2ApiClient } from '../src/main/sub2api-client'
 import type { AppStore } from '../src/main/store'
+import { DEFAULT_DISPLAY_FIELDS } from '../src/shared/display-fields'
 
 interface FakeStore {
   settings: AppSettings
@@ -30,6 +31,7 @@ function fakeStore(): FakeStore {
       dangerThreshold: 90,
       theme: 'system',
       windowBounds: { width: 468, height: 760 },
+      displayFields: [...DEFAULT_DISPLAY_FIELDS],
       accountFloats: {}
     },
     savedCredential: null,
@@ -80,11 +82,29 @@ describe('normalizeServerUrl', () => {
 describe('Sub2ApiClient protocol', () => {
   it('authenticates with x-api-key and joins account and batch usage data', async () => {
     const receivedKeys: string[] = []
+    let receivedTodayStats = false
     server = createServer((request, response) => {
       receivedKeys.push(String(request.headers['x-api-key'] || ''))
       const url = new URL(request.url || '/', 'http://localhost')
       if (url.pathname === '/api/v1/admin/system/version') {
         json(response, { code: 0, data: { version: 'v-test' } })
+        return
+      }
+      if (url.pathname === '/api/v1/admin/accounts/today-stats/batch') {
+        let body = ''
+        request.on('data', (chunk) => { body += chunk })
+        request.on('end', () => {
+          expect(JSON.parse(body)).toEqual({ account_ids: [11] })
+          receivedTodayStats = true
+          json(response, {
+            code: 0,
+            data: {
+              stats: {
+                '11': { requests: 19, tokens: 84000, cost: 1.25, standard_cost: 1.5, user_cost: 1.8 }
+              }
+            }
+          })
+        })
         return
       }
       if (url.pathname === '/api/v1/admin/accounts/usage/batch') {
@@ -148,7 +168,91 @@ describe('Sub2ApiClient protocol', () => {
     expect(dashboard.serverVersion).toBe('v-test')
     expect(dashboard.accounts).toHaveLength(1)
     expect(dashboard.usage['11'].five_hour?.utilization).toBe(42)
+    expect(dashboard.todayStats?.['11']).toMatchObject({ requests: 19, tokens: 84000, cost: 1.25 })
+    expect(receivedTodayStats).toBe(true)
     expect(receivedKeys.every((key) => key === 'admin-test-key')).toBe(true)
     expect(store.savedCredential).toEqual({ kind: 'api-key', secret: 'admin-test-key' })
+  })
+
+  it('loads cached 30-day statistics and scheduler scores only when selected', async () => {
+    let periodRequests = 0
+    let schedulerRequested = false
+    server = createServer((request, response) => {
+      const url = new URL(request.url || '/', 'http://localhost')
+      if (url.pathname === '/api/v1/admin/system/version') {
+        json(response, { code: 0, data: { version: 'v-test' } })
+        return
+      }
+      if (url.pathname === '/api/v1/admin/accounts/21/stats') {
+        periodRequests += 1
+        expect(url.searchParams.get('days')).toBe('30')
+        json(response, {
+          code: 0,
+          data: {
+            history: [],
+            summary: {
+              days: 30,
+              actual_days_used: 2,
+              total_cost: 1,
+              total_user_cost: 1.2,
+              total_standard_cost: 1.1,
+              total_requests: 10,
+              total_tokens: 2000,
+              avg_daily_cost: 0.5,
+              avg_daily_user_cost: 0.6,
+              avg_daily_requests: 5,
+              avg_daily_tokens: 1000,
+              avg_duration_ms: 800
+            },
+            models: [],
+            endpoints: [],
+            upstream_endpoints: []
+          }
+        })
+        return
+      }
+      if (url.pathname === '/api/v1/admin/accounts') {
+        if (url.searchParams.get('include_scheduler_score') === 'true') schedulerRequested = true
+        json(response, {
+          code: 0,
+          data: {
+            items: [{
+              id: 21,
+              name: 'DeepSeek API',
+              platform: 'deepseek',
+              type: 'apikey',
+              concurrency: 3,
+              status: 'active',
+              schedulable: true
+            }],
+            total: 1,
+            page: 1,
+            page_size: 1000,
+            pages: 1
+          }
+        })
+        return
+      }
+      json(response, { code: 404, message: 'not found' }, 404)
+    })
+
+    await new Promise<void>((resolve) => server?.listen(0, '127.0.0.1', resolve))
+    const port = (server.address() as AddressInfo).port
+    const store = fakeStore()
+    store.settings.displayFields = ['period-summary', 'account-scheduling']
+    const client = new Sub2ApiClient(store as unknown as AppStore)
+
+    await client.connect({
+      authMethod: 'api-key',
+      serverUrl: `http://127.0.0.1:${port}`,
+      apiKey: 'admin-test-key'
+    })
+    const first = await client.fetchDashboard()
+    const second = await client.fetchDashboard()
+
+    expect(first.accountStats?.['21'].summary.total_requests).toBe(10)
+    expect(second.accountStats?.['21'].summary.total_tokens).toBe(2000)
+    expect(periodRequests).toBe(1)
+    expect(schedulerRequested).toBe(true)
   })
 })

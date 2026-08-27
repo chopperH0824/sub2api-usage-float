@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AccountFloatPreference, AppSettings, DashboardSnapshot } from '../src/shared/types'
 import { DEFAULT_ACCOUNT_FLOAT } from '../src/shared/account-floats'
+import { DEFAULT_DISPLAY_FIELDS } from '../src/shared/display-fields'
 
 interface FakeWindowOptions {
   width: number
@@ -75,6 +76,7 @@ function settings(): AppSettings {
     dangerThreshold: 90,
     theme: 'system',
     windowBounds: { width: 468, height: 760 },
+    displayFields: [...DEFAULT_DISPLAY_FIELDS],
     accountFloats: {}
   }
 }
@@ -153,7 +155,7 @@ describe('AccountFloatManager', () => {
     expect(updated).toMatchObject({ opacity: 0.61, alwaysOnTop: false, size: 'large' })
     expect(target.opacity).toBe(0.61)
     expect(target.alwaysOnTop).toBe(false)
-    expect(target.bounds).toMatchObject({ width: 340, height: 190 })
+    expect(target.bounds).toMatchObject({ width: 380, height: 420 })
 
     const snapshot: DashboardSnapshot = {
       accounts: [{

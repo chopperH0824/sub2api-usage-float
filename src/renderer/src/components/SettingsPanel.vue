@@ -2,6 +2,7 @@
 import { computed, reactive, watch } from 'vue'
 import {
   ExternalLink,
+  Eye,
   LogOut,
   MonitorCog,
   Pin,
@@ -10,6 +11,7 @@ import {
   X
 } from '@lucide/vue'
 import type { AppSettings, ConnectionState, PublicSettings, ThemeMode } from '@shared/types'
+import DisplayFieldPicker from './DisplayFieldPicker.vue'
 
 const props = defineProps<{
   open: boolean
@@ -24,11 +26,20 @@ const emit = defineEmits<{
   openServer: []
 }>()
 
-const draft = reactive<AppSettings>({ ...props.settings, windowBounds: { ...props.settings.windowBounds } })
+function cloneSettings(settings: PublicSettings): AppSettings {
+  return {
+    ...settings,
+    windowBounds: { ...settings.windowBounds },
+    displayFields: [...settings.displayFields],
+    accountFloats: { ...settings.accountFloats }
+  }
+}
+
+const draft = reactive<AppSettings>(cloneSettings(props.settings))
 
 watch(
   () => [props.open, props.settings] as const,
-  () => Object.assign(draft, props.settings, { windowBounds: { ...props.settings.windowBounds } }),
+  () => Object.assign(draft, cloneSettings(props.settings)),
   { deep: true }
 )
 
@@ -47,7 +58,8 @@ function save(): void {
     opacity: draft.opacity,
     warningThreshold: draft.warningThreshold,
     dangerThreshold: draft.dangerThreshold,
-    theme: draft.theme
+    theme: draft.theme,
+    displayFields: [...draft.displayFields]
   })
 }
 </script>
@@ -105,6 +117,11 @@ function save(): void {
                 <input v-model.number="draft.opacity" type="range" min="0.72" max="1" step="0.01" />
                 <strong>{{ opacityLabel }}</strong>
               </label>
+            </div>
+
+            <div class="settings-section settings-section--fields">
+              <div class="settings-section__title"><Eye :size="15" /><span>显示内容</span></div>
+              <DisplayFieldPicker v-model="draft.displayFields" />
             </div>
 
             <div class="settings-section">

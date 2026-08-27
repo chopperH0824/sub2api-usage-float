@@ -74,13 +74,22 @@ function progressWindow(
     : progress.window_stats?.tokens
       ? `${formatCompactNumber(progress.window_stats.tokens)} tokens`
       : undefined
+  const remainingSeconds = finiteNumber(progress.remaining_seconds)
+  const resetAt = progress.resets_at || (
+    remainingSeconds !== null && remainingSeconds > 0
+      ? new Date(Date.now() + remainingSeconds * 1000).toISOString()
+      : undefined
+  )
   return {
     id,
     label,
     usedPercent: percent,
-    resetAt: progress.resets_at,
+    resetAt,
     updatedAt: usage.updated_at,
     detail,
+    stats: progress.window_stats,
+    usedRequests: used ?? undefined,
+    limitRequests: limit ?? undefined,
     source: usage.source || 'active'
   }
 }

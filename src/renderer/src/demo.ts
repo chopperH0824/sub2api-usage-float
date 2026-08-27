@@ -10,6 +10,7 @@ import type {
   TwoFactorPayload
 } from '@shared/types'
 import { DEFAULT_ACCOUNT_FLOAT } from '@shared/account-floats'
+import { DEFAULT_DISPLAY_FIELDS } from '@shared/display-fields'
 
 const baseSettings: PublicSettings = {
   serverUrl: 'https://sub2api.example.com',
@@ -24,6 +25,7 @@ const baseSettings: PublicSettings = {
   dangerThreshold: 90,
   theme: 'system',
   windowBounds: { width: 468, height: 760 },
+  displayFields: [...DEFAULT_DISPLAY_FIELDS],
   accountFloats: {},
   hasSavedCredential: true,
   secureStorageAvailable: true
@@ -38,6 +40,50 @@ function demoSnapshot(): DashboardSnapshot {
     usageErrors: {
       '7': '上游认证失效，请重新授权'
     },
+    todayStats: {
+      '1': { requests: 184, tokens: 3_820_000, cost: 7.42, standard_cost: 8.16, user_cost: 9.05 },
+      '2': { requests: 96, tokens: 1_284_000, cost: 4.38, standard_cost: 4.82, user_cost: 5.21 },
+      '3': { requests: 328, tokens: 892_000, cost: 2.14, standard_cost: 2.14, user_cost: 2.36 },
+      '5': { requests: 72, tokens: 680_000, cost: 3.92, standard_cost: 4.12, user_cost: 4.55 },
+      '6': { requests: 151, tokens: 2_120_000, cost: 5.34, standard_cost: 5.94, user_cost: 6.21 }
+    },
+    accountStats: {
+      '1': {
+        summary: {
+          days: 30,
+          actual_days_used: 27,
+          total_cost: 186.42,
+          total_user_cost: 214.18,
+          total_standard_cost: 201.76,
+          total_requests: 4821,
+          total_tokens: 98_420_000,
+          avg_daily_cost: 6.21,
+          avg_daily_user_cost: 7.14,
+          avg_daily_requests: 160.7,
+          avg_daily_tokens: 3_280_667,
+          avg_duration_ms: 2180,
+          highest_cost_day: { date: '2026-08-22', label: '08/22', cost: 14.82, user_cost: 16.3, requests: 281 },
+          highest_request_day: { date: '2026-08-24', label: '08/24', requests: 316, cost: 12.64, user_cost: 13.9 }
+        },
+        history: [
+          { date: '2026-08-27', label: '08/27', requests: 184, tokens: 3820000, cost: 8.16, actual_cost: 7.42, user_cost: 9.05 },
+          { date: '2026-08-26', label: '08/26', requests: 213, tokens: 4210000, cost: 9.08, actual_cost: 8.34, user_cost: 9.92 },
+          { date: '2026-08-25', label: '08/25', requests: 176, tokens: 3580000, cost: 7.44, actual_cost: 6.91, user_cost: 8.12 }
+        ],
+        models: [
+          { model: 'gpt-5.6', requests: 3180, input_tokens: 61200000, output_tokens: 14200000, cache_creation_tokens: 0, cache_read_tokens: 18300000, total_tokens: 93700000, cost: 184.2, actual_cost: 169.4, account_cost: 169.4 },
+          { model: 'gpt-5.4-mini', requests: 1641, input_tokens: 2810000, output_tokens: 1040000, cache_creation_tokens: 0, cache_read_tokens: 870000, total_tokens: 4720000, cost: 17.56, actual_cost: 17.02, account_cost: 17.02 }
+        ],
+        endpoints: [
+          { endpoint: '/v1/responses', requests: 4520, total_tokens: 96200000, cost: 196.44, actual_cost: 181.12 },
+          { endpoint: '/v1/chat/completions', requests: 301, total_tokens: 2220000, cost: 5.32, actual_cost: 5.3 }
+        ],
+        upstream_endpoints: [
+          { endpoint: '/backend-api/codex/responses', requests: 4821, total_tokens: 98420000, cost: 201.76, actual_cost: 186.42 }
+        ]
+      }
+    },
+    dataErrors: {},
     accounts: [
       {
         id: 1,
@@ -47,6 +93,15 @@ function demoSnapshot(): DashboardSnapshot {
         credentials: { email: 'work@example.com', plan_type: 'pro' },
         concurrency: 5,
         current_concurrency: 2,
+        load_factor: 5,
+        priority: 10,
+        rate_multiplier: 0.92,
+        scheduler_score: { base_score: 0.84, sticky_score: 1.12, sticky_weighted_enabled: true },
+        notes: '生产环境主账号',
+        groups: [{ id: 1, name: 'Codex 生产池', platform: 'openai' }],
+        group_ids: [1],
+        created_at: '2026-05-12T03:20:00Z',
+        updated_at: new Date(Date.now() - 12 * 60_000).toISOString(),
         base_rpm: 30,
         current_rpm: 8,
         status: 'active',
@@ -136,7 +191,13 @@ function demoSnapshot(): DashboardSnapshot {
       '1': {
         source: 'active',
         updated_at: new Date().toISOString(),
-        five_hour: { utilization: 64, resets_at: future(112), window_stats: { tokens: 3_820_000 } },
+        five_hour: {
+          utilization: 64,
+          resets_at: future(112),
+          used_requests: 184,
+          limit_requests: 300,
+          window_stats: { requests: 184, tokens: 3_820_000, cost: 7.42, standard_cost: 8.16, user_cost: 9.05 }
+        },
         seven_day: { utilization: 78, resets_at: future(4_320) }
       },
       '2': {
@@ -170,6 +231,13 @@ function demoSnapshot(): DashboardSnapshot {
         source: 'active',
         updated_at: new Date().toISOString(),
         subscription_tier: 'PRO',
+        ai_credits: [
+          { credit_type: 'monthly', amount: 1840, minimum_balance: 100 },
+          { credit_type: 'promotional', amount: 420, minimum_balance: 0 }
+        ],
+        antigravity_quota_details: {
+          'gemini-2.5-pro': { display_name: 'Gemini 2.5 Pro', supports_images: true, supports_thinking: true, max_tokens: 1_048_576, max_output_tokens: 65_536, recommended: true }
+        },
         antigravity_quota: {
           'gemini-2.5-pro': { utilization: 35, reset_time: future(380) },
           'claude-sonnet-4.5': { utilization: 81, reset_time: future(240) },

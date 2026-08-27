@@ -1,17 +1,25 @@
 import type {
   AccountUsageInfo,
+  AccountUsageStatsResponse,
   AuthMethod,
   AuthTokens,
   ConnectPayload,
   ConnectResult,
   ConnectionState,
   DashboardSnapshot,
+  DisplayFieldId,
   PaginatedResponse,
   Sub2ApiAccount,
   Sub2ApiEnvelope,
   Sub2ApiUser,
-  TwoFactorChallenge
+  TwoFactorChallenge,
+  WindowStats
 } from '@shared/types'
+import {
+  hasAnyDisplayField,
+  PERIOD_DISPLAY_FIELDS,
+  TODAY_DISPLAY_FIELDS
+} from '@shared/display-fields'
 import type { AppStore } from './store'
 
 interface RuntimeSession {
@@ -138,6 +146,12 @@ export class Sub2ApiClient {
   private pendingTwoFactor: PendingTwoFactor | null = null
   private connectionError = ''
   private serverVersion = ''
+  private readonly accountStatsCache = new Map<number, {
+    expiresAt: number
+    value: AccountUsageStatsResponse
+  }>()
+  private todayStatsSupported: boolean | null = null
+  private readonly unsupportedPeriodStats = new Set<number>()
 
   constructor(private readonly store: AppStore) {}
 
@@ -195,6 +209,9 @@ export class Sub2ApiClient {
     const serverUrl = normalizeServerUrl(payload.serverUrl)
     this.pendingTwoFactor = null
     this.connectionError = ''
+    this.accountStatsCache.clear()
+    this.todayStatsSupported = null
+    this.unsupportedPeriodStats.clear()
 
     if (payload.authMethod === 'api-key') {
       const apiKey = payload.apiKey.trim()
@@ -274,6 +291,9 @@ export class Sub2ApiClient {
     this.pendingTwoFactor = null
     this.serverVersion = ''
     this.connectionError = ''
+    this.accountStatsCache.clear()
+    this.todayStatsSupported = null
+    this.unsupportedPeriodStats.clear()
     await this.store.clearCredential()
 
     if (session?.refreshToken) {
@@ -292,35 +312,25 @@ export class Sub2ApiClient {
 
   async fetchDashboard(forceUsage = false): Promise<DashboardSnapshot> {
     if (!this.session) throw new Sub2ApiError('尚未连接 Sub2API 服务器')
-    const accounts = await this.fetchAllAccounts()
-    const eligibleIds = accounts.filter(usageEligible).map((account) => account.id)
-    let usage: Record<string, AccountUsageInfo> = {}
-    let usageErrors: Record<string, string> = {}
+    const includeSchedulerScore = this.shouldIncludeSchedulerScore()
+    const accounts = await this.fetchAllAccounts(includeSchedulerScore)
+    const eligibleAccounts = accounts.filter(usageEligible)
+    const todayAccountIds = this.requestedAccountIds(accounts, TODAY_DISPLAY_FIELDS)
+    const periodAccountIds = this.requestedAccountIds(accounts, PERIOD_DISPLAY_FIELDS)
 
-    if (eligibleIds.length > 0) {
-      try {
-        const batch = await this.requestAuthenticated<{
-          usage?: Record<string, AccountUsageInfo>
-          errors?: Record<string, string>
-        }>('/admin/accounts/usage/batch', {
-          method: 'POST',
-          body: { account_ids: eligibleIds, force: forceUsage },
-          timeoutMs: 75_000
-        })
-        usage = batch.usage || {}
-        usageErrors = batch.errors || {}
-      } catch (error) {
-        if (!(error instanceof Sub2ApiError) || ![404, 405].includes(error.status)) throw error
-        const fallback = await this.fetchUsageFallback(accounts.filter(usageEligible))
-        usage = fallback.usage
-        usageErrors = fallback.errors
-      }
-    }
+    const [usageResult, todayResult, periodResult] = await Promise.all([
+      this.fetchUsageData(eligibleAccounts, forceUsage),
+      this.fetchTodayStats(todayAccountIds),
+      this.fetchPeriodStats(periodAccountIds)
+    ])
 
     return {
       accounts,
-      usage,
-      usageErrors,
+      usage: usageResult.usage,
+      usageErrors: usageResult.errors,
+      todayStats: todayResult.stats,
+      accountStats: periodResult.stats,
+      dataErrors: { ...todayResult.errors, ...periodResult.errors },
       fetchedAt: new Date().toISOString(),
       serverVersion: this.serverVersion || undefined
     }
@@ -422,7 +432,7 @@ export class Sub2ApiClient {
     const headers: Record<string, string> = {
       Accept: 'application/json',
       'Accept-Language': 'zh-CN',
-      'User-Agent': 'Sub2API-Usage-Float/0.1.0'
+      'User-Agent': 'Sub2API-Usage-Float/0.3.0'
     }
     if (options.body !== undefined) headers['Content-Type'] = 'application/json'
     if (options.auth) {
@@ -493,17 +503,165 @@ export class Sub2ApiClient {
     return payload as T
   }
 
-  private async fetchAllAccounts(): Promise<Sub2ApiAccount[]> {
+  private shouldIncludeSchedulerScore(): boolean {
+    const settings = this.store.getSettings()
+    if (settings.displayFields.includes('account-scheduling')) return true
+    return Object.values(settings.accountFloats).some(
+      (preference) => preference.open && preference.displayFields.includes('account-scheduling')
+    )
+  }
+
+  private requestedAccountIds(
+    accounts: Sub2ApiAccount[],
+    candidates: ReadonlySet<DisplayFieldId>
+  ): number[] {
+    const settings = this.store.getSettings()
+    const allAccounts = hasAnyDisplayField(settings.displayFields, candidates)
+    return accounts
+      .filter((account) => {
+        if (allAccounts) return true
+        const preference = settings.accountFloats[String(account.id)]
+        return Boolean(preference?.open && hasAnyDisplayField(preference.displayFields, candidates))
+      })
+      .map((account) => account.id)
+  }
+
+  private async fetchUsageData(
+    accounts: Sub2ApiAccount[],
+    forceUsage: boolean
+  ): Promise<{ usage: Record<string, AccountUsageInfo>; errors: Record<string, string> }> {
+    if (!accounts.length) return { usage: {}, errors: {} }
+    const accountIds = accounts.map((account) => account.id)
+    try {
+      const batch = await this.requestAuthenticated<{
+        usage?: Record<string, AccountUsageInfo>
+        errors?: Record<string, string>
+      }>('/admin/accounts/usage/batch', {
+        method: 'POST',
+        body: { account_ids: accountIds, force: forceUsage },
+        timeoutMs: 75_000
+      })
+      return { usage: batch.usage || {}, errors: batch.errors || {} }
+    } catch (error) {
+      if (!(error instanceof Sub2ApiError) || ![404, 405].includes(error.status)) throw error
+      return this.fetchUsageFallback(accounts)
+    }
+  }
+
+  private async fetchTodayStats(accountIds: number[]): Promise<{
+    stats: Record<string, WindowStats>
+    errors: Record<string, string>
+  }> {
+    const stats: Record<string, WindowStats> = {}
+    const errors: Record<string, string> = {}
+    if (!accountIds.length) return { stats, errors }
+    if (this.todayStatsSupported === false) {
+      for (const accountId of accountIds) errors[String(accountId)] = '今日统计：当前服务器版本不支持'
+      return { stats, errors }
+    }
+
+    try {
+      const batch = await this.requestAuthenticated<{ stats?: Record<string, WindowStats> }>(
+        '/admin/accounts/today-stats/batch',
+        {
+          method: 'POST',
+          body: { account_ids: accountIds },
+          timeoutMs: 45_000
+        }
+      )
+      this.todayStatsSupported = true
+      return { stats: batch.stats || {}, errors }
+    } catch (error) {
+      if (!(error instanceof Sub2ApiError) || ![404, 405].includes(error.status)) {
+        const message = this.errorMessage(error)
+        for (const accountId of accountIds) errors[String(accountId)] = `今日统计：${message}`
+        return { stats, errors }
+      }
+    }
+
+    const queue = [...accountIds]
+    let unsupportedCount = 0
+    const workers = Array.from({ length: Math.min(6, queue.length) }, async () => {
+      while (queue.length) {
+        const accountId = queue.shift()
+        if (!accountId) return
+        try {
+          stats[String(accountId)] = await this.requestAuthenticated<WindowStats>(
+            `/admin/accounts/${accountId}/today-stats`,
+            { timeoutMs: 30_000 }
+          )
+        } catch (error) {
+          if (error instanceof Sub2ApiError && [404, 405].includes(error.status)) unsupportedCount += 1
+          errors[String(accountId)] = `今日统计：${this.errorMessage(error)}`
+        }
+      }
+    })
+    await Promise.all(workers)
+    if (unsupportedCount === accountIds.length) {
+      this.todayStatsSupported = false
+      for (const accountId of accountIds) errors[String(accountId)] = '今日统计：当前服务器版本不支持'
+    } else if (Object.keys(stats).length) {
+      this.todayStatsSupported = true
+    }
+    return { stats, errors }
+  }
+
+  private async fetchPeriodStats(accountIds: number[]): Promise<{
+    stats: Record<string, AccountUsageStatsResponse>
+    errors: Record<string, string>
+  }> {
+    const stats: Record<string, AccountUsageStatsResponse> = {}
+    const errors: Record<string, string> = {}
+    const queue = accountIds.filter((accountId) => {
+      if (!this.unsupportedPeriodStats.has(accountId)) return true
+      errors[String(accountId)] = '30 天统计：当前服务器版本不支持'
+      return false
+    })
+    const workers = Array.from({ length: Math.min(4, queue.length) }, async () => {
+      while (queue.length) {
+        const accountId = queue.shift()
+        if (!accountId) return
+        const cached = this.accountStatsCache.get(accountId)
+        if (cached && cached.expiresAt > Date.now()) {
+          stats[String(accountId)] = cached.value
+          continue
+        }
+        try {
+          const value = await this.requestAuthenticated<AccountUsageStatsResponse>(
+            `/admin/accounts/${accountId}/stats?days=30`,
+            { timeoutMs: 45_000 }
+          )
+          stats[String(accountId)] = value
+          this.accountStatsCache.set(accountId, {
+            value,
+            expiresAt: Date.now() + 5 * 60_000
+          })
+        } catch (error) {
+          if (error instanceof Sub2ApiError && [404, 405].includes(error.status)) {
+            this.unsupportedPeriodStats.add(accountId)
+            errors[String(accountId)] = '30 天统计：当前服务器版本不支持'
+          } else {
+            errors[String(accountId)] = `30 天统计：${this.errorMessage(error)}`
+          }
+        }
+      }
+    })
+    await Promise.all(workers)
+    return { stats, errors }
+  }
+
+  private async fetchAllAccounts(includeSchedulerScore = false): Promise<Sub2ApiAccount[]> {
     const pageSize = 1000
+    const schedulerQuery = includeSchedulerScore ? '&include_scheduler_score=true' : ''
     const first = await this.requestAuthenticated<PaginatedResponse<Sub2ApiAccount>>(
-      `/admin/accounts?page=1&page_size=${pageSize}&sort_by=name&sort_order=asc`,
+      `/admin/accounts?page=1&page_size=${pageSize}&sort_by=name&sort_order=asc${schedulerQuery}`,
       { timeoutMs: 45_000 }
     )
     const accounts = [...(first.items || [])]
     const pages = Math.max(1, Number(first.pages) || Math.ceil((first.total || accounts.length) / pageSize))
     for (let page = 2; page <= pages; page += 1) {
       const next = await this.requestAuthenticated<PaginatedResponse<Sub2ApiAccount>>(
-        `/admin/accounts?page=${page}&page_size=${pageSize}&sort_by=name&sort_order=asc`,
+        `/admin/accounts?page=${page}&page_size=${pageSize}&sort_by=name&sort_order=asc${schedulerQuery}`,
         { timeoutMs: 45_000 }
       )
       accounts.push(...(next.items || []))
