@@ -1,4 +1,5 @@
 import type {
+  AccountFloatPreference,
   AppSettings,
   BootstrapPayload,
   ConnectPayload,
@@ -8,6 +9,7 @@ import type {
   PublicSettings,
   TwoFactorPayload
 } from '@shared/types'
+import { DEFAULT_ACCOUNT_FLOAT } from '@shared/account-floats'
 
 const baseSettings: PublicSettings = {
   serverUrl: 'https://sub2api.example.com',
@@ -22,6 +24,7 @@ const baseSettings: PublicSettings = {
   dangerThreshold: 90,
   theme: 'system',
   windowBounds: { width: 468, height: 760 },
+  accountFloats: {},
   hasSavedCredential: true,
   secureStorageAvailable: true
 }
@@ -232,6 +235,7 @@ export function createDemoApi(): DashboardApi {
       return bootstrap()
     },
     refresh: async () => demoSnapshot(),
+    getLatestDashboard: async () => demoSnapshot(),
     updateSettings: async (patch: Partial<AppSettings>) => {
       settings = { ...settings, ...patch }
       return settings
@@ -246,7 +250,48 @@ export function createDemoApi(): DashboardApi {
     },
     openServer: async () => undefined,
     hideWindow: async () => undefined,
-    onRefreshRequested: () => () => undefined
+    openAccountFloat: async (accountId: number) => {
+      const key = String(accountId)
+      const preference: AccountFloatPreference = {
+        ...DEFAULT_ACCOUNT_FLOAT,
+        ...settings.accountFloats[key],
+        open: true
+      }
+      settings = {
+        ...settings,
+        accountFloats: { ...settings.accountFloats, [key]: preference }
+      }
+      return preference
+    },
+    closeAccountFloat: async (accountId: number) => {
+      const key = String(accountId)
+      const preference: AccountFloatPreference = {
+        ...DEFAULT_ACCOUNT_FLOAT,
+        ...settings.accountFloats[key],
+        open: false
+      }
+      settings = {
+        ...settings,
+        accountFloats: { ...settings.accountFloats, [key]: preference }
+      }
+      return preference
+    },
+    updateAccountFloat: async (accountId: number, patch: Partial<AccountFloatPreference>) => {
+      const key = String(accountId)
+      const preference: AccountFloatPreference = {
+        ...DEFAULT_ACCOUNT_FLOAT,
+        ...settings.accountFloats[key],
+        ...patch
+      }
+      settings = {
+        ...settings,
+        accountFloats: { ...settings.accountFloats, [key]: preference }
+      }
+      return preference
+    },
+    onRefreshRequested: () => () => undefined,
+    onDashboardUpdated: () => () => undefined,
+    onSettingsChanged: () => () => undefined
   }
 }
 

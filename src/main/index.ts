@@ -9,14 +9,26 @@ import {
   Tray
 } from 'electron'
 import { join } from 'node:path'
-import type { AppSettings, ConnectPayload, TwoFactorPayload } from '@shared/types'
+import type {
+  AccountFloatPreference,
+  AppSettings,
+  ConnectPayload,
+  ConnectResult,
+  DashboardSnapshot,
+  TwoFactorPayload
+} from '@shared/types'
 import { AppStore } from './store'
 import { Sub2ApiClient } from './sub2api-client'
+import { AccountFloatManager } from './account-float-manager'
 
 const COMPACT_SIZE = { width: 420, height: 382 }
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
+let floatManager: AccountFloatManager | null = null
+let apiClient: Sub2ApiClient | null = null
+let latestSnapshot: DashboardSnapshot | null = null
+let dashboardRefreshPromise: Promise<DashboardSnapshot> | null = null
 let isQuitting = false
 let persistBoundsTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -63,11 +75,41 @@ function applyCompactMode(value: boolean, settings: AppSettings): void {
   mainWindow.setSize(width, height, true)
 }
 
+function broadcastSettings(store: AppStore): void {
+  const settings = store.getPublicSettings()
+  for (const target of BrowserWindow.getAllWindows()) {
+    if (!target.isDestroyed()) target.webContents.send('settings:changed', settings)
+  }
+}
+
+function broadcastSnapshot(snapshot: DashboardSnapshot): void {
+  latestSnapshot = snapshot
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('dashboard:updated', snapshot)
+  }
+  floatManager?.broadcastSnapshot(snapshot)
+}
+
+async function refreshDashboard(forceUsage = false): Promise<DashboardSnapshot> {
+  if (!apiClient) throw new Error('Sub2API 客户端尚未就绪')
+  if (dashboardRefreshPromise) return dashboardRefreshPromise
+  dashboardRefreshPromise = apiClient.fetchDashboard(forceUsage)
+    .then((snapshot) => {
+      broadcastSnapshot(snapshot)
+      return snapshot
+    })
+    .finally(() => {
+      dashboardRefreshPromise = null
+    })
+  return dashboardRefreshPromise
+}
+
 function buildTrayMenu(store: AppStore): Menu {
   const settings = store.getSettings()
+  const floatCount = floatManager?.windowCount || 0
   return Menu.buildFromTemplate([
     {
-      label: mainWindow?.isVisible() ? '隐藏用量浮窗' : '显示用量浮窗',
+      label: mainWindow?.isVisible() ? '隐藏主看板' : '显示主看板',
       click: () => {
         if (mainWindow?.isVisible()) mainWindow.hide()
         else showMainWindow()
@@ -75,20 +117,38 @@ function buildTrayMenu(store: AppStore): Menu {
       }
     },
     {
+      label: `账号浮窗 (${floatCount})`,
+      submenu: [
+        {
+          label: '显示全部',
+          enabled: floatCount > 0,
+          click: () => floatManager?.showAll()
+        },
+        {
+          label: '隐藏全部',
+          enabled: floatCount > 0,
+          click: () => floatManager?.hideAll()
+        },
+        {
+          label: '关闭全部',
+          enabled: floatCount > 0,
+          click: () => { void floatManager?.closeAll(true) }
+        }
+      ]
+    },
+    {
       label: '刷新数据',
-      click: () => {
-        showMainWindow()
-        mainWindow?.webContents.send('dashboard:request-refresh')
-      }
+      click: () => mainWindow?.webContents.send('dashboard:request-refresh')
     },
     { type: 'separator' },
     {
-      label: '窗口置顶',
+      label: '主看板置顶',
       type: 'checkbox',
       checked: settings.alwaysOnTop,
       click: async (item) => {
         await store.updateSettings({ alwaysOnTop: item.checked })
         applyAlwaysOnTop(item.checked)
+        broadcastSettings(store)
         refreshTrayMenu(store)
       }
     },
@@ -145,7 +205,8 @@ function createWindow(store: AppStore): void {
     frame: true,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 14, y: 14 },
-    backgroundColor: '#f4f5f3',
+    transparent: true,
+    backgroundColor: '#00000000',
     icon: assetPath('app-icon.png'),
     opacity: settings.opacity,
     webPreferences: {
@@ -194,25 +255,48 @@ function createWindow(store: AppStore): void {
   }
 }
 
-function registerIpc(store: AppStore, client: Sub2ApiClient): void {
+function registerIpc(store: AppStore, client: Sub2ApiClient, manager: AccountFloatManager): void {
   ipcMain.handle('app:bootstrap', async () => ({
     settings: store.getPublicSettings(),
     connection: client.getConnectionState()
   }))
 
-  ipcMain.handle('auth:connect', async (_event, payload: ConnectPayload) => client.connect(payload))
-  ipcMain.handle('auth:complete-2fa', async (_event, payload: TwoFactorPayload) => {
-    return client.completeTwoFactor(payload.code)
+  const restoreFloatsAfterConnect = async (result: ConnectResult): Promise<ConnectResult> => {
+    if (result.status === 'connected') {
+      latestSnapshot = null
+      await manager.restore()
+    }
+    return result
+  }
+
+  ipcMain.handle('auth:connect', async (_event, payload: ConnectPayload) => {
+    return restoreFloatsAfterConnect(await client.connect(payload))
   })
-  ipcMain.handle('auth:retry-saved', async () => client.retrySavedConnection())
+  ipcMain.handle('auth:complete-2fa', async (_event, payload: TwoFactorPayload) => {
+    return restoreFloatsAfterConnect(await client.completeTwoFactor(payload.code))
+  })
+  ipcMain.handle('auth:retry-saved', async () => {
+    const connection = await client.retrySavedConnection()
+    if (connection.connected) {
+      latestSnapshot = null
+      await manager.restore()
+    }
+    return connection
+  })
   ipcMain.handle('auth:disconnect', async () => {
+    await manager.closeAll(true)
     await client.disconnect()
+    latestSnapshot = null
+    broadcastSettings(store)
     return {
       settings: store.getPublicSettings(),
       connection: client.getConnectionState()
     }
   })
-  ipcMain.handle('dashboard:refresh', async (_event, forceUsage = false) => client.fetchDashboard(forceUsage))
+  ipcMain.handle('dashboard:refresh', async (_event, forceUsage = false) => {
+    return refreshDashboard(forceUsage)
+  })
+  ipcMain.handle('dashboard:get-latest', async () => latestSnapshot || refreshDashboard(false))
 
   ipcMain.handle('settings:update', async (_event, patch: Partial<AppSettings>) => {
     const previous = store.getSettings()
@@ -223,6 +307,7 @@ function registerIpc(store: AppStore, client: Sub2ApiClient): void {
     if (settings.opacity !== previous.opacity) mainWindow?.setOpacity(settings.opacity)
     if (settings.alwaysOnTop !== previous.alwaysOnTop) applyAlwaysOnTop(settings.alwaysOnTop)
     if (settings.compactMode !== previous.compactMode) applyCompactMode(settings.compactMode, settings)
+    broadcastSettings(store)
     refreshTrayMenu(store)
     return store.getPublicSettings()
   })
@@ -230,15 +315,23 @@ function registerIpc(store: AppStore, client: Sub2ApiClient): void {
   ipcMain.handle('window:set-always-on-top', async (_event, value: boolean) => {
     await store.updateSettings({ alwaysOnTop: value })
     applyAlwaysOnTop(value)
+    broadcastSettings(store)
     refreshTrayMenu(store)
     return value
   })
   ipcMain.handle('window:set-compact', async (_event, value: boolean) => {
     const settings = await store.updateSettings({ compactMode: value })
     applyCompactMode(value, settings)
+    broadcastSettings(store)
     return value
   })
   ipcMain.handle('window:hide', () => mainWindow?.hide())
+  ipcMain.handle('account-float:open', async (_event, accountId: number) => manager.open(accountId))
+  ipcMain.handle('account-float:close', async (_event, accountId: number) => manager.close(accountId))
+  ipcMain.handle(
+    'account-float:update',
+    async (_event, accountId: number, patch: Partial<AccountFloatPreference>) => manager.update(accountId, patch)
+  )
   ipcMain.handle('app:open-server', async () => {
     const url = client.getConnectionState().serverUrl || store.getSettings().serverUrl
     if (url) await shell.openExternal(url)
@@ -251,9 +344,23 @@ async function start(): Promise<void> {
   const client = new Sub2ApiClient(store)
   await client.restore()
 
-  registerIpc(store, client)
+  apiClient = client
+  floatManager = new AccountFloatManager({
+    store,
+    preloadPath: join(__dirname, '../preload/index.js'),
+    rendererFile: join(__dirname, '../renderer/index.html'),
+    rendererUrl: process.env.ELECTRON_RENDERER_URL,
+    isQuitting: () => isQuitting,
+    onStateChanged: () => {
+      broadcastSettings(store)
+      refreshTrayMenu(store)
+    }
+  })
+
+  registerIpc(store, client, floatManager)
   createWindow(store)
   createTray(store)
+  if (client.getConnectionState().connected) await floatManager.restore()
   if (app.isPackaged && store.getSettings().launchAtLogin) {
     app.setLoginItemSettings({ openAtLogin: store.getSettings().launchAtLogin })
   }

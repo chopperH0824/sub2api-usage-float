@@ -11,6 +11,7 @@ import {
   Gem,
   Layers3,
   Orbit,
+  PictureInPicture2,
   Radar,
   Sparkles,
   UsersRound,
@@ -37,6 +38,11 @@ const props = defineProps<{
   warningThreshold: number
   dangerThreshold: number
   compact?: boolean
+  floated?: boolean
+}>()
+
+const emit = defineEmits<{
+  toggleFloat: []
 }>()
 
 const expanded = ref(false)
@@ -128,6 +134,16 @@ function capacityTone(metric: CapacityMetric): string {
         </div>
         <p class="account-card__subtitle" :title="subtitle">{{ subtitle }}</p>
       </div>
+      <button
+        type="button"
+        class="account-card__float-button"
+        :class="{ 'is-active': floated }"
+        :aria-label="floated ? '关闭独立浮窗' : '打开独立浮窗'"
+        :title="floated ? '关闭独立浮窗' : '打开独立浮窗'"
+        @click="emit('toggleFloat')"
+      >
+        <PictureInPicture2 :size="15" />
+      </button>
     </header>
 
     <div v-if="capacities.length" class="capacity-strip" aria-label="容量信息">

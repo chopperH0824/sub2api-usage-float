@@ -16,6 +16,7 @@ import {
   X
 } from '@lucide/vue'
 import type {
+  AccountFloatPreference,
   AccountSeverity,
   BootstrapPayload,
   ConnectResult,
@@ -27,11 +28,18 @@ import type {
 import { accountSeverity, accountSubtitle, getUsageWindows, platformLabel } from '@shared/usage'
 import { dashboardApi } from './api'
 import AccountCard from './components/AccountCard.vue'
+import AccountFloatView from './components/AccountFloatView.vue'
 import ConnectionView from './components/ConnectionView.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 
 type StatusFilter = 'all' | 'attention' | 'offline'
 type SortMode = 'attention' | 'usage' | 'name'
+
+const query = new URLSearchParams(window.location.search)
+const parsedFloatAccountId = Number(query.get('accountId'))
+const floatAccountId = query.get('view') === 'account-float' && Number.isInteger(parsedFloatAccountId)
+  ? parsedFloatAccountId
+  : 0
 
 interface AccountViewModel {
   account: Sub2ApiAccount
@@ -55,6 +63,8 @@ const sortMode = ref<SortMode>('attention')
 let tickTimer: ReturnType<typeof setInterval> | null = null
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 let removeRefreshListener: (() => void) | null = null
+let removeDashboardListener: (() => void) | null = null
+let removeSettingsListener: (() => void) | null = null
 
 const fallbackSettings: PublicSettings = {
   serverUrl: '',
@@ -69,6 +79,7 @@ const fallbackSettings: PublicSettings = {
   dangerThreshold: 90,
   theme: 'system',
   windowBounds: { width: 468, height: 760 },
+  accountFloats: {},
   hasSavedCredential: false,
   secureStorageAvailable: false
 }
@@ -246,6 +257,32 @@ async function disconnect(): Promise<void> {
   scheduleRefresh()
 }
 
+function applyAccountFloatPreference(accountId: number, preference: AccountFloatPreference): void {
+  if (!bootstrap.value) return
+  bootstrap.value.settings = {
+    ...bootstrap.value.settings,
+    accountFloats: {
+      ...bootstrap.value.settings.accountFloats,
+      [String(accountId)]: preference
+    }
+  }
+}
+
+function isAccountFloatOpen(accountId: number): boolean {
+  return Boolean(settings.value.accountFloats[String(accountId)]?.open)
+}
+
+async function toggleAccountFloat(accountId: number): Promise<void> {
+  try {
+    const preference = isAccountFloatOpen(accountId)
+      ? await dashboardApi.closeAccountFloat(accountId)
+      : await dashboardApi.openAccountFloat(accountId)
+    applyAccountFloatPreference(accountId, preference)
+  } catch (value) {
+    refreshError.value = cleanError(value)
+  }
+}
+
 function clearFilters(): void {
   searchQuery.value = ''
   platformFilter.value = 'all'
@@ -255,8 +292,18 @@ function clearFilters(): void {
 watch(() => settings.value.theme, applyTheme)
 
 onMounted(() => {
+  if (floatAccountId) return
   tickTimer = setInterval(() => { now.value = Date.now() }, 1000)
   removeRefreshListener = dashboardApi.onRefreshRequested(() => { void refreshData(false) })
+  removeDashboardListener = dashboardApi.onDashboardUpdated((next) => {
+    snapshot.value = next
+    refreshError.value = ''
+  })
+  removeSettingsListener = dashboardApi.onSettingsChanged((next) => {
+    if (!bootstrap.value) return
+    bootstrap.value.settings = next
+    applyTheme()
+  })
   void loadBootstrap()
 })
 
@@ -264,11 +311,14 @@ onBeforeUnmount(() => {
   if (tickTimer) clearInterval(tickTimer)
   if (refreshTimer) clearInterval(refreshTimer)
   removeRefreshListener?.()
+  removeDashboardListener?.()
+  removeSettingsListener?.()
 })
 </script>
 
 <template>
-  <div class="app-shell" :class="{ 'is-compact': settings.compactMode }">
+  <AccountFloatView v-if="floatAccountId" :account-id="floatAccountId" />
+  <div v-else class="app-shell" :class="{ 'is-compact': settings.compactMode }">
     <div v-if="bootstrapping" class="boot-screen">
       <img src="./assets/app-icon.png" alt="" />
       <span class="spinner spinner--large" />
@@ -398,6 +448,8 @@ onBeforeUnmount(() => {
             :warning-threshold="settings.warningThreshold"
             :danger-threshold="settings.dangerThreshold"
             :compact="settings.compactMode"
+            :floated="isAccountFloatOpen(item.account.id)"
+            @toggle-float="toggleAccountFloat(item.account.id)"
           />
         </template>
 

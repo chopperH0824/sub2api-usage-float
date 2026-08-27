@@ -29,7 +29,8 @@ function fakeStore(): FakeStore {
       warningThreshold: 75,
       dangerThreshold: 90,
       theme: 'system',
-      windowBounds: { width: 468, height: 760 }
+      windowBounds: { width: 468, height: 760 },
+      accountFloats: {}
     },
     savedCredential: null,
     getSettings() {

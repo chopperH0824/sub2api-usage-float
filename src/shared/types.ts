@@ -1,11 +1,20 @@
 export type AuthMethod = 'api-key' | 'password'
 export type ThemeMode = 'system' | 'light' | 'dark'
+export type AccountFloatSize = 'small' | 'medium' | 'large'
 
 export interface WindowBounds {
   x?: number
   y?: number
   width: number
   height: number
+}
+
+export interface AccountFloatPreference {
+  open: boolean
+  opacity: number
+  alwaysOnTop: boolean
+  size: AccountFloatSize
+  bounds?: WindowBounds
 }
 
 export interface AppSettings {
@@ -21,6 +30,7 @@ export interface AppSettings {
   dangerThreshold: number
   theme: ThemeMode
   windowBounds: WindowBounds
+  accountFloats: Record<string, AccountFloatPreference>
 }
 
 export interface PublicSettings extends AppSettings {
@@ -262,10 +272,16 @@ export interface DashboardApi {
   retrySavedConnection(): Promise<ConnectionState>
   disconnect(): Promise<BootstrapPayload>
   refresh(forceUsage?: boolean): Promise<DashboardSnapshot>
+  getLatestDashboard(): Promise<DashboardSnapshot>
   updateSettings(patch: Partial<AppSettings>): Promise<PublicSettings>
   setAlwaysOnTop(value: boolean): Promise<boolean>
   setCompactMode(value: boolean): Promise<boolean>
   openServer(): Promise<void>
   hideWindow(): Promise<void>
+  openAccountFloat(accountId: number): Promise<AccountFloatPreference>
+  closeAccountFloat(accountId: number): Promise<AccountFloatPreference>
+  updateAccountFloat(accountId: number, patch: Partial<AccountFloatPreference>): Promise<AccountFloatPreference>
   onRefreshRequested(callback: () => void): () => void
+  onDashboardUpdated(callback: (snapshot: DashboardSnapshot) => void): () => void
+  onSettingsChanged(callback: (settings: PublicSettings) => void): () => void
 }
