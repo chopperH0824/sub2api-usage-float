@@ -1497,55 +1497,81 @@ button {
 .boot-screen__visual {
   position: relative;
   display: grid;
+  width: 164px;
+  height: 164px;
+  margin-bottom: 10px;
   place-items: center;
-  width: 96px;
-  height: 96px;
-  margin-bottom: 16px;
+  animation: bootReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.boot-screen__logo {
-  position: relative;
-  z-index: 2;
-  width: 72px;
-  height: 72px;
-  border-radius: 18px;
-  box-shadow: 0 12px 32px rgba(16, 185, 129, 0.25), 0 4px 12px rgba(0, 0, 0, 0.15);
-  animation: bootFloat 2.4s ease-in-out infinite alternate;
-}
-
-.boot-screen__pulse {
+.boot-screen__orbit,
+.boot-screen__core {
   position: absolute;
-  inset: 0;
-  z-index: 1;
-  border-radius: 24px;
-  background: radial-gradient(circle, var(--emerald) 0%, transparent 70%);
-  opacity: 0.4;
-  filter: blur(12px);
-  animation: bootPulse 2s ease-in-out infinite;
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  will-change: transform;
+}
+
+.boot-screen__orbit {
+  width: 154px;
+  height: 154px;
+  filter: drop-shadow(0 12px 20px rgba(15, 23, 42, 0.12));
+  animation: bootOrbit 8s linear infinite;
+}
+
+.boot-screen__core {
+  z-index: 2;
+  width: 82px;
+  height: 82px;
+  filter: drop-shadow(0 10px 18px rgba(16, 185, 129, 0.2));
+  animation: bootCore 2.2s ease-in-out infinite;
 }
 
 .boot-screen__title {
+  margin-bottom: 3px;
+  color: var(--text);
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0;
-  color: var(--text);
-  margin-bottom: 4px;
 }
 
 .boot-screen__hint {
-  font-size: 12px;
-  font-weight: 500;
   color: var(--muted);
+  font-size: 11px;
+  font-weight: 550;
+  animation: bootHint 1.6s ease-in-out infinite;
 }
 
-@keyframes bootFloat {
-  0% { transform: translateY(0px) scale(1); }
-  100% { transform: translateY(-4px) scale(1.02); }
+@keyframes bootReveal {
+  from { transform: scale(0.86); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
-@keyframes bootPulse {
-  0%, 100% { transform: scale(0.85); opacity: 0.25; }
-  50% { transform: scale(1.15); opacity: 0.55; }
+@keyframes bootOrbit {
+  from { transform: rotate(-12deg); }
+  to { transform: rotate(348deg); }
+}
+
+@keyframes bootCore {
+  0%, 100% { transform: translateY(2px) scale(0.97); }
+  50% { transform: translateY(-4px) scale(1.02); }
+}
+
+@keyframes bootHint {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-screen__visual,
+  .boot-screen__orbit,
+  .boot-screen__core,
+  .boot-screen__hint {
+    animation: none;
+  }
 }
 
 /* ==========================================================================

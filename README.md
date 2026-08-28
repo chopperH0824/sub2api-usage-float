@@ -60,7 +60,7 @@ npm run dev
 npm run dev:web
 ```
 
-预览地址为 `http://127.0.0.1:5173/`；连接页可访问 `http://127.0.0.1:5173/?screen=connect`，账号浮窗可访问 `http://127.0.0.1:5173/?view=account-float&accountId=1`。
+预览地址为 `http://127.0.0.1:5173/`；连接页可访问 `http://127.0.0.1:5173/?screen=connect`，开屏动画可访问 `http://127.0.0.1:5173/?screen=boot`，账号浮窗可访问 `http://127.0.0.1:5173/?view=account-float&accountId=1`。
 
 ## 构建 macOS 安装包
 

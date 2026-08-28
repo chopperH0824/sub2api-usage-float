@@ -1,6 +1,6 @@
 {
   "name": "sub2api-usage-float",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "description": "Sub2API account usage desktop floating dashboard",
   "main": "./out/main/index.js",

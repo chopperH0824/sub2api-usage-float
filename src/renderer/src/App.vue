@@ -42,6 +42,7 @@ type StatusFilter = 'all' | 'attention' | 'offline'
 type SortMode = 'attention' | 'usage' | 'name'
 
 const query = new URLSearchParams(window.location.search)
+const previewBootScreen = import.meta.env.DEV && query.get('screen') === 'boot'
 const parsedFloatAccountId = Number(query.get('accountId'))
 const floatAccountId = query.get('view') === 'account-float' && Number.isInteger(parsedFloatAccountId)
   ? parsedFloatAccountId
@@ -332,7 +333,7 @@ function clearFilters(): void {
 watch(() => settings.value.theme, applyTheme)
 
 onMounted(() => {
-  if (floatAccountId) return
+  if (floatAccountId || previewBootScreen) return
   tickTimer = setInterval(() => { now.value = Date.now() }, 1000)
   removeRefreshListener = dashboardApi.onRefreshRequested(() => { void refreshData(false) })
   removeDashboardListener = dashboardApi.onDashboardUpdated((next) => {
@@ -360,12 +361,12 @@ onBeforeUnmount(() => {
   <AccountFloatView v-if="floatAccountId" :account-id="floatAccountId" />
   <div v-else class="app-shell" :class="{ 'is-compact': settings.compactMode }">
     <div v-if="bootstrapping" class="boot-screen">
-      <div class="boot-screen__visual">
-        <img src="./assets/app-icon.png" alt="Sub2API" class="boot-screen__logo" />
-        <div class="boot-screen__pulse" aria-hidden="true" />
+      <div class="boot-screen__visual" aria-hidden="true">
+        <img src="./assets/boot-orbit.png" alt="" class="boot-screen__orbit" />
+        <img src="./assets/boot-core.png" alt="" class="boot-screen__core" />
       </div>
       <span class="boot-screen__title">Sub2API 用量浮窗</span>
-      <span class="boot-screen__hint">正在加载账号数据...</span>
+      <span class="boot-screen__hint">正在同步账号状态</span>
     </div>
 
     <template v-else-if="!connection.connected">
