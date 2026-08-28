@@ -323,8 +323,12 @@ onBeforeUnmount(() => {
   <AccountFloatView v-if="floatAccountId" :account-id="floatAccountId" />
   <div v-else class="app-shell" :class="{ 'is-compact': settings.compactMode }">
     <div v-if="bootstrapping" class="boot-screen">
-      <img src="./assets/app-icon.png" alt="" />
-      <span class="spinner spinner--large" />
+      <div class="boot-screen__visual">
+        <img src="./assets/app-icon.png" alt="Sub2API" class="boot-screen__logo" />
+        <div class="boot-screen__pulse" aria-hidden="true" />
+      </div>
+      <span class="boot-screen__title">Sub2API 用量浮窗</span>
+      <span class="boot-screen__hint">正在加载账号数据...</span>
     </div>
 
     <template v-else-if="!connection.connected">
