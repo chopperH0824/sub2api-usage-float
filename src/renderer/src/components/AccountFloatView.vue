@@ -17,7 +17,7 @@ import {
   X
 } from '@lucide/vue'
 import { DEFAULT_ACCOUNT_FLOAT } from '@shared/account-floats'
-import { CAPACITY_DISPLAY_FIELDS } from '@shared/display-fields'
+import { CAPACITY_DISPLAY_FIELDS, type DisplayPreset } from '@shared/display-fields'
 import type {
   AccountDetailItem,
   AccountFloatPreference,
@@ -186,6 +186,14 @@ async function selectSize(size: AccountFloatSize): Promise<void> {
   await updatePreference({ size })
 }
 
+async function handleSelectPreset(preset: DisplayPreset): Promise<void> {
+  await updatePreference({
+    displayFields: [...preset.fields],
+    size: preset.floatSize
+  })
+  await refresh()
+}
+
 function selectDisplayFields(displayFields: DisplayFieldId[]): void {
   const next = [...displayFields]
   setLocalPreference({ ...preference.value, displayFields: next })
@@ -331,6 +339,7 @@ onBeforeUnmount(() => {
         :default-fields="[...DEFAULT_ACCOUNT_FLOAT.displayFields]"
         compact
         @update:model-value="selectDisplayFields"
+        @select-preset="handleSelectPreset"
       />
     </div>
 

@@ -145,6 +145,91 @@ export const CAPACITY_DISPLAY_FIELDS: Record<string, DisplayFieldId> = {
   'total-quota': 'capacity-total'
 }
 
+export interface DisplayPreset {
+  id: string
+  label: string
+  iconName: string
+  description: string
+  fields: readonly DisplayFieldId[]
+  dashboardSize: { width: number; height: number }
+  floatSize: 'small' | 'medium' | 'large'
+}
+
+export const DISPLAY_PRESETS: readonly DisplayPreset[] = [
+  {
+    id: 'minimal',
+    label: '极简',
+    iconName: 'Zap',
+    description: '仅看实时额度窗口与并发状态，超省空间',
+    fields: [
+      'usage-windows',
+      'usage-sample',
+      'capacity-concurrency'
+    ],
+    dashboardSize: { width: 420, height: 560 },
+    floatSize: 'small'
+  },
+  {
+    id: 'standard',
+    label: '标准',
+    iconName: 'LayoutDashboard',
+    description: '核心额度、今日请求/Token、并发与容量限制',
+    fields: [...DEFAULT_DISPLAY_FIELDS],
+    dashboardSize: { width: 468, height: 760 },
+    floatSize: 'medium'
+  },
+  {
+    id: 'costs',
+    label: '成本',
+    iconName: 'CircleDollarSign',
+    description: '聚焦窗口成本、今日成本、30天历史与模型明细',
+    fields: [
+      'usage-windows',
+      'window-costs',
+      'today-costs',
+      'today-requests',
+      'today-tokens',
+      'period-summary',
+      'period-history',
+      'period-models',
+      'capacity-window-cost',
+      'capacity-daily',
+      'capacity-weekly',
+      'capacity-total'
+    ],
+    dashboardSize: { width: 520, height: 820 },
+    floatSize: 'large'
+  },
+  {
+    id: 'platform',
+    label: '平台',
+    iconName: 'Sparkles',
+    description: '聚焦各平台专属配额、AI Credits与模型能力',
+    fields: [
+      'usage-windows',
+      'usage-sample',
+      'capacity-concurrency',
+      'antigravity-details',
+      'ai-credits',
+      'grok-details',
+      'ollama-details',
+      'extension-fields',
+      'usage-health'
+    ],
+    dashboardSize: { width: 480, height: 780 },
+    floatSize: 'medium'
+  },
+  {
+    id: 'expert',
+    label: '全能',
+    iconName: 'Layers',
+    description: '全选 36 项：调度分、代理、影子账号、全量详情',
+    fields: [...ALL_DISPLAY_FIELDS],
+    dashboardSize: { width: 580, height: 900 },
+    floatSize: 'large'
+  }
+]
+
 export function isDisplayFieldId(value: unknown): value is DisplayFieldId {
   return typeof value === 'string' && displayFieldSet.has(value)
 }

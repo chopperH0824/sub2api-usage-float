@@ -1,10 +1,21 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CheckCheck, RotateCcw, Square } from '@lucide/vue'
+import {
+  CheckCheck,
+  CircleDollarSign,
+  Layers,
+  LayoutDashboard,
+  RotateCcw,
+  Sparkles,
+  Square,
+  Zap
+} from '@lucide/vue'
 import {
   ALL_DISPLAY_FIELDS,
   DEFAULT_DISPLAY_FIELDS,
   DISPLAY_FIELD_GROUPS,
+  DISPLAY_PRESETS,
+  type DisplayPreset,
   normalizeDisplayFields
 } from '@shared/display-fields'
 import type { DisplayFieldId } from '@shared/types'
@@ -20,10 +31,34 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: DisplayFieldId[]]
+  'selectPreset': [preset: DisplayPreset]
 }>()
 
 const selected = computed(() => new Set(props.modelValue))
 const selectedCount = computed(() => selected.value.size)
+
+const presetIcons: Record<string, unknown> = {
+  Zap,
+  LayoutDashboard,
+  CircleDollarSign,
+  Sparkles,
+  Layers
+}
+
+function getPresetIcon(name: string): unknown {
+  return presetIcons[name] || LayoutDashboard
+}
+
+function isPresetActive(preset: DisplayPreset): boolean {
+  if (preset.fields.length !== props.modelValue.length) return false
+  const set = selected.value
+  return preset.fields.every((field) => set.has(field))
+}
+
+function applyPreset(preset: DisplayPreset): void {
+  commit(preset.fields)
+  emit('selectPreset', preset)
+}
 
 function commit(values: Iterable<DisplayFieldId>): void {
   emit('update:modelValue', normalizeDisplayFields([...values], []))
@@ -61,6 +96,21 @@ function clearAll(): void {
 
 <template>
   <div class="field-picker" :class="{ 'field-picker--compact': compact }">
+    <div class="preset-strip" aria-label="显示预设">
+      <button
+        v-for="preset in DISPLAY_PRESETS"
+        :key="preset.id"
+        type="button"
+        class="preset-chip"
+        :class="{ 'is-active': isPresetActive(preset) }"
+        :title="preset.description"
+        @click="applyPreset(preset)"
+      >
+        <component :is="getPresetIcon(preset.iconName)" :size="12" />
+        <span>{{ preset.label }}</span>
+      </button>
+    </div>
+
     <header class="field-picker__toolbar">
       <span><strong>{{ selectedCount }}</strong>/{{ ALL_DISPLAY_FIELDS.length }}</span>
       <div>

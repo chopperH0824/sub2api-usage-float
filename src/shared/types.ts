@@ -511,6 +511,7 @@ export interface DashboardApi {
   updateSettings(patch: Partial<AppSettings>): Promise<PublicSettings>
   setAlwaysOnTop(value: boolean): Promise<boolean>
   setCompactMode(value: boolean): Promise<boolean>
+  resizeWindow(size: { width: number; height: number }): Promise<{ width: number; height: number } | undefined>
   openServer(): Promise<void>
   hideWindow(): Promise<void>
   openAccountFloat(accountId: number): Promise<AccountFloatPreference>

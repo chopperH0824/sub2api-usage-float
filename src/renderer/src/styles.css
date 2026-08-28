@@ -525,6 +525,49 @@ button {
   color: var(--muted);
 }
 
+/* Preset Switcher Strip */
+.preset-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.preset-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.preset-chip:hover {
+  background: var(--surface-strong);
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.preset-chip.is-active {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  border-color: var(--blue-border);
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.12);
+}
+
 /* ==========================================================================
    ACCOUNT LIST & MODERN CARDS (COLLECTUI AESTHETIC)
    ========================================================================== */

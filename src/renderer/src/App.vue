@@ -6,14 +6,19 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
   CircleCheck,
+  CircleDollarSign,
   ExternalLink,
+  Layers,
+  LayoutDashboard,
   Pin,
   RefreshCw,
   Search,
   Settings,
   SlidersHorizontal,
+  Sparkles,
   Unplug,
-  X
+  X,
+  Zap
 } from '@lucide/vue'
 import type {
   AccountFloatPreference,
@@ -26,7 +31,7 @@ import type {
   Sub2ApiAccount
 } from '@shared/types'
 import { accountSeverity, accountSubtitle, getUsageWindows, platformLabel } from '@shared/usage'
-import { DEFAULT_DISPLAY_FIELDS } from '@shared/display-fields'
+import { DEFAULT_DISPLAY_FIELDS, DISPLAY_PRESETS, type DisplayPreset } from '@shared/display-fields'
 import { dashboardApi } from './api'
 import AccountCard from './components/AccountCard.vue'
 import AccountFloatView from './components/AccountFloatView.vue'
@@ -286,6 +291,38 @@ async function toggleAccountFloat(accountId: number): Promise<void> {
   }
 }
 
+const presetIcons: Record<string, unknown> = {
+  Zap,
+  LayoutDashboard,
+  CircleDollarSign,
+  Sparkles,
+  Layers
+}
+
+function getPresetIcon(name: string): unknown {
+  return presetIcons[name] || LayoutDashboard
+}
+
+function isPresetActive(preset: DisplayPreset): boolean {
+  if (preset.fields.length !== settings.value.displayFields.length) return false
+  const set = new Set(settings.value.displayFields)
+  return preset.fields.every((field) => set.has(field))
+}
+
+async function applyDisplayPreset(preset: DisplayPreset): Promise<void> {
+  const currentSettings = settings.value
+  const nextSettings = {
+    ...currentSettings,
+    displayFields: [...preset.fields]
+  }
+  if (bootstrap.value) {
+    bootstrap.value.settings = nextSettings
+  }
+  await dashboardApi.updateSettings({ displayFields: [...preset.fields] })
+  await dashboardApi.resizeWindow(preset.dashboardSize)
+  await refreshData(false)
+}
+
 function clearFilters(): void {
   searchQuery.value = ''
   platformFilter.value = 'all'
@@ -395,6 +432,21 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="filter-band">
+        <div class="preset-strip" aria-label="快捷预设">
+          <button
+            v-for="preset in DISPLAY_PRESETS"
+            :key="preset.id"
+            type="button"
+            class="preset-chip"
+            :class="{ 'is-active': isPresetActive(preset) }"
+            :title="`${preset.label}模式：${preset.description}`"
+            @click="applyDisplayPreset(preset)"
+          >
+            <component :is="getPresetIcon(preset.iconName)" :size="12" />
+            <span>{{ preset.label }}</span>
+          </button>
+        </div>
+
         <div class="search-box">
           <Search :size="15" />
           <input v-model="searchQuery" type="search" placeholder="搜索账号" aria-label="搜索账号" />

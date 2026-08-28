@@ -325,6 +325,14 @@ function registerIpc(store: AppStore, client: Sub2ApiClient, manager: AccountFlo
     broadcastSettings(store)
     return value
   })
+  ipcMain.handle('window:resize', async (_event, size: { width: number; height: number }) => {
+    if (!mainWindow) return
+    const width = Math.max(380, Math.round(size.width))
+    const height = Math.max(320, Math.round(size.height))
+    mainWindow.setSize(width, height, true)
+    await store.updateSettings({ windowBounds: { width, height } })
+    return { width, height }
+  })
   ipcMain.handle('window:hide', () => mainWindow?.hide())
   ipcMain.handle('account-float:open', async (_event, accountId: number) => manager.open(accountId))
   ipcMain.handle('account-float:close', async (_event, accountId: number) => manager.close(accountId))

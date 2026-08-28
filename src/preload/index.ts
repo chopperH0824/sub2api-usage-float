@@ -20,6 +20,7 @@ const api: DashboardApi = {
   updateSettings: (patch: Partial<AppSettings>) => ipcRenderer.invoke('settings:update', patch),
   setAlwaysOnTop: (value: boolean) => ipcRenderer.invoke('window:set-always-on-top', value),
   setCompactMode: (value: boolean) => ipcRenderer.invoke('window:set-compact', value),
+  resizeWindow: (size: { width: number; height: number }) => ipcRenderer.invoke('window:resize', size),
   openServer: () => ipcRenderer.invoke('app:open-server'),
   hideWindow: () => ipcRenderer.invoke('window:hide'),
   openAccountFloat: (accountId: number) => ipcRenderer.invoke('account-float:open', accountId),

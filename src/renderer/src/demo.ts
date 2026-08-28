@@ -316,6 +316,10 @@ export function createDemoApi(): DashboardApi {
       settings.compactMode = value
       return value
     },
+    resizeWindow: async (size: { width: number; height: number }) => {
+      settings.windowBounds = { ...settings.windowBounds, ...size }
+      return size
+    },
     openServer: async () => undefined,
     hideWindow: async () => undefined,
     openAccountFloat: async (accountId: number) => {
