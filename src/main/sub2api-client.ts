@@ -432,7 +432,7 @@ export class Sub2ApiClient {
     const headers: Record<string, string> = {
       Accept: 'application/json',
       'Accept-Language': 'zh-CN',
-      'User-Agent': 'Sub2API-Usage-Float/0.4.2'
+      'User-Agent': 'Sub2API-Usage-Float/0.4.3'
     }
     if (options.body !== undefined) headers['Content-Type'] = 'application/json'
     if (options.auth) {

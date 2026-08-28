@@ -191,7 +191,7 @@ button {
   flex: 0 0 50px;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
+  padding: 0 14px 0 78px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
   -webkit-app-region: drag;
