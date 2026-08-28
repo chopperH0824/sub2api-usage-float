@@ -6,11 +6,21 @@ import type {
   ConnectResult,
   DashboardApi,
   DashboardSnapshot,
+  DesktopPlatform,
   PublicSettings,
   TwoFactorPayload
 } from '@shared/types'
 import { DEFAULT_ACCOUNT_FLOAT } from '@shared/account-floats'
 import { DEFAULT_DISPLAY_FIELDS } from '@shared/display-fields'
+
+const requestedPlatform = new URLSearchParams(window.location.search).get('platform')
+const demoPlatform: DesktopPlatform = requestedPlatform === 'windows' || requestedPlatform === 'linux' || requestedPlatform === 'macos'
+  ? requestedPlatform
+  : navigator.userAgent.includes('Windows')
+    ? 'windows'
+    : navigator.userAgent.includes('Linux')
+      ? 'linux'
+      : 'macos'
 
 const baseSettings: PublicSettings = {
   serverUrl: 'https://sub2api.example.com',
@@ -260,7 +270,8 @@ export function createDemoApi(): DashboardApi {
       authMethod: settings.authMethod,
       displayName: connected ? 'Admin API Key' : undefined,
       serverVersion: connected ? 'v0.1.146' : undefined
-    }
+    },
+    platform: demoPlatform
   })
 
   return {

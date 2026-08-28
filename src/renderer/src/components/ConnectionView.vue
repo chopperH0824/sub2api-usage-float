@@ -105,8 +105,8 @@ async function retrySavedConnection(): Promise<void> {
     <div class="connection-view__brand">
       <img :src="appIcon" alt="" class="connection-view__icon" />
       <div>
-        <h1>Sub2API 用量</h1>
-        <p>桌面浮窗</p>
+        <h1>Sub2API</h1>
+        <p>用量与调度看板</p>
       </div>
     </div>
 
@@ -222,7 +222,7 @@ async function retrySavedConnection(): Promise<void> {
 
       <p class="secure-storage-state">
         <LockKeyhole :size="13" />
-        {{ settings.secureStorageAvailable ? '凭据由系统钥匙串保护' : '凭据仅保留至本次退出' }}
+        {{ settings.secureStorageAvailable ? '凭据由系统安全存储保护' : '凭据仅保留至本次退出' }}
       </p>
     </form>
 
@@ -267,7 +267,7 @@ async function retrySavedConnection(): Promise<void> {
   align-items: center;
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 58px 36px 30px;
+  padding: 64px 36px 32px;
   background: var(--bg);
   -webkit-app-region: drag;
 }
@@ -276,24 +276,24 @@ async function retrySavedConnection(): Promise<void> {
   display: flex;
   width: min(380px, 100%);
   align-items: center;
-  gap: 14px;
-  margin-bottom: 22px;
+  gap: 13px;
+  margin-bottom: 26px;
 }
 
 .connection-view__icon {
   display: block;
-  width: 72px;
-  height: 72px;
-  flex: 0 0 72px;
+  width: 68px;
+  height: 68px;
+  flex: 0 0 68px;
   object-fit: contain;
-  filter: drop-shadow(0 10px 18px rgba(15, 23, 42, 0.12));
+  filter: drop-shadow(0 7px 14px rgba(20, 28, 36, 0.08));
 }
 
 .connection-view__brand h1 {
   margin: 0;
   color: var(--text);
-  font-size: 20px;
-  font-weight: 750;
+  font-size: 22px;
+  font-weight: 720;
   letter-spacing: 0;
 }
 
@@ -301,7 +301,7 @@ async function retrySavedConnection(): Promise<void> {
   margin: 3px 0 0;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 550;
+  font-weight: 520;
 }
 
 .connection-form {
@@ -382,11 +382,11 @@ async function retrySavedConnection(): Promise<void> {
   justify-content: center;
   gap: 7px;
   margin-top: 18px;
-  border-radius: 8px;
-  background: var(--blue);
-  color: #ffffff;
+  border-radius: 7px;
+  background: var(--text);
+  color: var(--surface);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 680;
   cursor: pointer;
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
@@ -431,8 +431,8 @@ async function retrySavedConnection(): Promise<void> {
 .spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.45);
-  border-top-color: #ffffff;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
   border-radius: 50%;
   animation: connectionSpin 0.8s linear infinite;
 }

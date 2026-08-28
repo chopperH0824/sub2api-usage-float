@@ -1,6 +1,6 @@
 # Sub2API 用量浮窗
 
-一个只读的 macOS 桌面用量看板。数据全部来自现有 Sub2API 管理 API，不直连 PostgreSQL/Redis，也不需要修改服务器部署。
+一个只读的 macOS、Windows 和 Linux 桌面用量看板。数据全部来自现有 Sub2API 管理 API，不直连 PostgreSQL/Redis，也不需要修改服务器部署。
 
 [下载最新版本](https://github.com/chopperH0824/sub2api-usage-float/releases/latest) · [问题反馈](https://github.com/chopperH0824/sub2api-usage-float/issues)
 
@@ -15,7 +15,7 @@
 - 异常、封禁、验证、重新授权、暂停、限流、过载和临时不可调度状态
 - 平台/状态筛选、账号搜索、告警优先排序
 - 每个账号可打开独立透明浮窗，并单独保存位置、尺寸、透明度和置顶状态
-- 主看板置顶、紧凑模式、透明度、暗色模式、开机启动和系统托盘
+- 主看板置顶、紧凑模式、透明度、暗色模式、系统托盘，以及 macOS/Windows 登录时启动
 
 支持 OpenAI/Codex、Anthropic/Claude、Gemini、Antigravity、Grok、Kimi、智谱、DeepSeek 和 Ollama Cloud 的现有字段。新版服务器优先使用批量接口；旧版没有批量接口时自动降级为受限并发的逐账号读取。
 
@@ -47,7 +47,7 @@
 
 ## 本地开发
 
-需要 Node.js 22.12 或更高版本。当前安装包支持 Apple Silicon Mac 和 macOS 13 及以上系统。
+需要 Node.js 22.12 或更高版本。正式产物支持 Apple Silicon Mac（macOS 13+）、Windows x64 和 Linux x64。
 
 ```bash
 npm install
@@ -62,13 +62,15 @@ npm run dev:web
 
 预览地址为 `http://127.0.0.1:5173/`；连接页可访问 `http://127.0.0.1:5173/?screen=connect`，开屏动画可访问 `http://127.0.0.1:5173/?screen=boot`，账号浮窗可访问 `http://127.0.0.1:5173/?view=account-float&accountId=1`。
 
-## 构建 macOS 安装包
+## 构建桌面安装包
 
 ```bash
-npm run build:mac
+npm run build:mac    # macOS arm64: DMG + ZIP
+npm run build:win    # Windows x64: NSIS EXE + ZIP
+npm run build:linux  # Linux x64: AppImage + DEB
 ```
 
-构建产物位于 `release/`，包含 Apple Silicon 的 DMG 和 ZIP。当前本地构建未做 Apple Developer 签名；首次运行时可在 Finder 中右键应用并选择“打开”。
+构建产物位于 `release/`。macOS 与 Windows 当前未配置开发者签名，首次打开时可能出现系统安全提示；Linux AppImage 首次运行前需要赋予可执行权限。正式 Release 的三个平台产物由对应的 GitHub Actions 原生运行器分别构建。
 
 ## 验证
 
@@ -93,7 +95,8 @@ npm run build
 ## 本地安全
 
 - 密码只用于当前登录请求，从不落盘。
-- Admin API Key 或刷新令牌通过 Electron `safeStorage` 加密，macOS 下由系统钥匙串保护。
+- Admin API Key 或刷新令牌通过 Electron `safeStorage` 加密，并交由 macOS 钥匙串、Windows DPAPI 或 Linux Secret Service/KWallet 保护。
+- Linux 缺少安全密钥环并退化为 `basic_text` 时，应用不会保存任何凭据。
 - Key/令牌只存在于 Electron 主进程，不暴露给 Vue 渲染页面。
 - 本地配置保存在 Electron 的应用数据目录，文件权限为 `0600`。
 - 若系统安全存储不可用，凭据只保留在当前运行会话。

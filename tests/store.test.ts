@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const electronState = vi.hoisted(() => ({ userData: '' }))
+const electronState = vi.hoisted(() => ({ userData: '', storageBackend: 'gnome_libsecret' }))
 
 vi.mock('electron', () => ({
   app: {
@@ -11,20 +11,33 @@ vi.mock('electron', () => ({
   },
   safeStorage: {
     isEncryptionAvailable: () => true,
+    getSelectedStorageBackend: () => electronState.storageBackend,
     encryptString: (value: string) => Buffer.from(value, 'utf8'),
     decryptString: (value: Buffer) => value.toString('utf8')
   }
 }))
 
-import { AppStore } from '../src/main/store'
+import { AppStore, isSecureStorageAvailable } from '../src/main/store'
 import { DEFAULT_DISPLAY_FIELDS } from '../src/shared/display-fields'
 
 beforeEach(async () => {
   electronState.userData = await mkdtemp(join(tmpdir(), 'sub2api-float-store-'))
+  electronState.storageBackend = 'gnome_libsecret'
 })
 
 afterEach(async () => {
   await rm(electronState.userData, { recursive: true, force: true })
+})
+
+describe('AppStore secure storage', () => {
+  it('rejects the unencrypted Linux basic_text backend', () => {
+    electronState.storageBackend = 'basic_text'
+    expect(isSecureStorageAvailable('linux')).toBe(false)
+    expect(isSecureStorageAvailable('darwin')).toBe(true)
+
+    electronState.storageBackend = 'kwallet6'
+    expect(isSecureStorageAvailable('linux')).toBe(true)
+  })
 })
 
 describe('AppStore account floats', () => {

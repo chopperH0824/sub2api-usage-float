@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -20,3 +24,45 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run build
       - run: npm test
+
+  package:
+    if: github.event_name == 'push'
+    needs: validate
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            target: mac
+            artifact: macos-arm64
+            paths: |
+              release/*.dmg
+              release/*-mac-arm64.zip
+          - runner: windows-latest
+            target: win
+            artifact: windows-x64
+            paths: |
+              release/*.exe
+              release/*-win-x64.zip
+          - runner: ubuntu-latest
+            target: linux
+            artifact: linux-x64
+            paths: |
+              release/*.AppImage
+              release/*.deb
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build:${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.paths }}
+          if-no-files-found: error
+          retention-days: 7

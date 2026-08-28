@@ -1,5 +1,6 @@
 export type AuthMethod = 'api-key' | 'password'
 export type ThemeMode = 'system' | 'light' | 'dark'
+export type DesktopPlatform = 'macos' | 'windows' | 'linux'
 export type AccountFloatSize = 'small' | 'medium' | 'large'
 export type DisplayFieldId =
   | 'usage-windows'
@@ -83,6 +84,7 @@ export interface ConnectionState {
 export interface BootstrapPayload {
   settings: PublicSettings
   connection: ConnectionState
+  platform: DesktopPlatform
 }
 
 export interface ApiKeyConnectPayload {

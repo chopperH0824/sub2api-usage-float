@@ -44,6 +44,7 @@ watch(
 )
 
 const opacityLabel = computed(() => `${Math.round(draft.opacity * 100)}%`)
+const supportsLaunchAtLogin = document.documentElement.dataset.platform !== 'linux'
 
 function selectTheme(theme: ThemeMode): void {
   draft.theme = theme
@@ -107,7 +108,7 @@ function save(): void {
                 <input v-model="draft.compactMode" type="checkbox" />
                 <i class="toggle-switch" aria-hidden="true" />
               </label>
-              <label class="settings-toggle-row">
+              <label v-if="supportsLaunchAtLogin" class="settings-toggle-row">
                 <span><RefreshCw :size="14" />登录时启动</span>
                 <input v-model="draft.launchAtLogin" type="checkbox" />
                 <i class="toggle-switch" aria-hidden="true" />

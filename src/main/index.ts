@@ -15,13 +15,23 @@ import type {
   ConnectPayload,
   ConnectResult,
   DashboardSnapshot,
+  DesktopPlatform,
   TwoFactorPayload
 } from '@shared/types'
 import { AppStore } from './store'
 import { Sub2ApiClient } from './sub2api-client'
 import { AccountFloatManager } from './account-float-manager'
 
+const APP_ID = 'io.github.chopperh0824.sub2api-usage-float'
 const COMPACT_SIZE = { width: 420, height: 382 }
+const DESKTOP_PLATFORM: DesktopPlatform = process.platform === 'darwin'
+  ? 'macos'
+  : process.platform === 'win32'
+    ? 'windows'
+    : 'linux'
+const SUPPORTS_LOGIN_AT_STARTUP = process.platform === 'darwin' || process.platform === 'win32'
+
+if (process.platform === 'win32') app.setAppUserModelId(APP_ID)
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -168,8 +178,11 @@ function refreshTrayMenu(store: AppStore): void {
 }
 
 function createTray(store: AppStore): void {
-  const image = nativeImage.createFromPath(assetPath('tray-icon.png')).resize({ width: 18, height: 18 })
-  image.setTemplateImage(process.platform === 'darwin')
+  const isMac = process.platform === 'darwin'
+  const image = nativeImage
+    .createFromPath(assetPath(isMac ? 'tray-icon.png' : 'app-icon.png'))
+    .resize({ width: isMac ? 18 : 20, height: isMac ? 18 : 20 })
+  image.setTemplateImage(isMac)
   tray = new Tray(image)
   tray.setToolTip('Sub2API 用量浮窗')
   tray.setContextMenu(buildTrayMenu(store))
@@ -203,10 +216,14 @@ function createWindow(store: AppStore): void {
     maxHeight: 1200,
     show: false,
     frame: true,
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 14, y: 14 },
-    transparent: true,
-    backgroundColor: '#00000000',
+    ...(process.platform === 'darwin'
+      ? {
+          titleBarStyle: 'hiddenInset' as const,
+          trafficLightPosition: { x: 14, y: 14 }
+        }
+      : {}),
+    transparent: process.platform === 'darwin',
+    backgroundColor: process.platform === 'darwin' ? '#00000000' : '#f3f5f7',
     icon: assetPath('app-icon.png'),
     opacity: settings.opacity,
     webPreferences: {
@@ -258,7 +275,8 @@ function createWindow(store: AppStore): void {
 function registerIpc(store: AppStore, client: Sub2ApiClient, manager: AccountFloatManager): void {
   ipcMain.handle('app:bootstrap', async () => ({
     settings: store.getPublicSettings(),
-    connection: client.getConnectionState()
+    connection: client.getConnectionState(),
+    platform: DESKTOP_PLATFORM
   }))
 
   const restoreFloatsAfterConnect = async (result: ConnectResult): Promise<ConnectResult> => {
@@ -290,7 +308,8 @@ function registerIpc(store: AppStore, client: Sub2ApiClient, manager: AccountFlo
     broadcastSettings(store)
     return {
       settings: store.getPublicSettings(),
-      connection: client.getConnectionState()
+      connection: client.getConnectionState(),
+      platform: DESKTOP_PLATFORM
     }
   })
   ipcMain.handle('dashboard:refresh', async (_event, forceUsage = false) => {
@@ -301,7 +320,7 @@ function registerIpc(store: AppStore, client: Sub2ApiClient, manager: AccountFlo
   ipcMain.handle('settings:update', async (_event, patch: Partial<AppSettings>) => {
     const previous = store.getSettings()
     const settings = await store.updateSettings(patch)
-    if (app.isPackaged && settings.launchAtLogin !== previous.launchAtLogin) {
+    if (app.isPackaged && SUPPORTS_LOGIN_AT_STARTUP && settings.launchAtLogin !== previous.launchAtLogin) {
       app.setLoginItemSettings({ openAtLogin: settings.launchAtLogin })
     }
     if (settings.opacity !== previous.opacity) mainWindow?.setOpacity(settings.opacity)
@@ -369,8 +388,8 @@ async function start(): Promise<void> {
   createWindow(store)
   createTray(store)
   if (client.getConnectionState().connected) await floatManager.restore()
-  if (app.isPackaged && store.getSettings().launchAtLogin) {
-    app.setLoginItemSettings({ openAtLogin: store.getSettings().launchAtLogin })
+  if (app.isPackaged && SUPPORTS_LOGIN_AT_STARTUP && store.getSettings().launchAtLogin) {
+    app.setLoginItemSettings({ openAtLogin: true })
   }
 }
 

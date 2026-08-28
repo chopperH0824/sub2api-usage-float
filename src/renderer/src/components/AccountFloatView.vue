@@ -159,6 +159,7 @@ function cleanError(value: unknown): string {
 
 function applyTheme(): void {
   document.documentElement.dataset.theme = bootstrap.value?.settings.theme || 'system'
+  document.documentElement.dataset.platform = bootstrap.value?.platform || 'macos'
 }
 
 function setLocalPreference(next: AccountFloatPreference): void {

@@ -1,6 +1,6 @@
 {
   "name": "sub2api-usage-float",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "private": true,
   "description": "Sub2API account usage desktop floating dashboard",
   "main": "./out/main/index.js",
@@ -19,7 +19,9 @@
     "dev": "electron-vite dev",
     "dev:web": "vite --config vite.web.config.ts",
     "build": "npm run typecheck && electron-vite build",
-    "build:mac": "npm run build && electron-builder --mac",
+    "build:mac": "npm run build && electron-builder --mac --arm64",
+    "build:win": "npm run build && electron-builder --win --x64",
+    "build:linux": "npm run build && electron-builder --linux --x64",
     "preview": "electron-vite preview",
     "typecheck": "vue-tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
@@ -70,6 +72,30 @@
         "zip"
       ],
       "identity": null
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sub2API 用量浮窗"
+    },
+    "linux": {
+      "icon": "build/icons",
+      "category": "Utility",
+      "executableName": "sub2api-usage-float",
+      "synopsis": "Sub2API 账号用量桌面看板",
+      "target": [
+        "AppImage",
+        "deb"
+      ]
     },
     "dmg": {
       "title": "Sub2API 用量浮窗 ${version}",

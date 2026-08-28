@@ -18,6 +18,17 @@ import {
 
 type CredentialKind = 'api-key' | 'refresh-token' | 'access-token'
 
+export function isSecureStorageAvailable(platform: NodeJS.Platform = process.platform): boolean {
+  if (!safeStorage.isEncryptionAvailable()) return false
+  if (platform !== 'linux') return true
+  try {
+    const backend = safeStorage.getSelectedStorageBackend()
+    return backend !== 'basic_text' && backend !== 'unknown'
+  } catch {
+    return false
+  }
+}
+
 interface PersistedCredential {
   kind: CredentialKind
   encrypted: string
@@ -171,6 +182,10 @@ export class AppStore {
         settings: sanitizeSettings(parsed.settings),
         credential: isCredential(parsed.credential) ? parsed.credential : undefined
       }
+      if (this.state.credential && !isSecureStorageAvailable()) {
+        this.state.credential = undefined
+        await this.save()
+      }
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
       if (code !== 'ENOENT') {
@@ -198,10 +213,11 @@ export class AppStore {
   }
 
   getPublicSettings(): PublicSettings {
+    const secureStorageAvailable = isSecureStorageAvailable()
     return {
       ...this.getSettings(),
-      hasSavedCredential: Boolean(this.state.credential),
-      secureStorageAvailable: safeStorage.isEncryptionAvailable()
+      hasSavedCredential: Boolean(this.state.credential) && secureStorageAvailable,
+      secureStorageAvailable
     }
   }
 
@@ -252,7 +268,7 @@ export class AppStore {
   }
 
   async saveCredential(kind: CredentialKind, secret: string): Promise<void> {
-    if (!safeStorage.isEncryptionAvailable()) {
+    if (!isSecureStorageAvailable()) {
       this.state.credential = undefined
       await this.save()
       return
@@ -265,7 +281,7 @@ export class AppStore {
   }
 
   readCredential(): { kind: CredentialKind; secret: string } | null {
-    if (!this.state.credential || !safeStorage.isEncryptionAvailable()) return null
+    if (!this.state.credential || !isSecureStorageAvailable()) return null
     try {
       const encrypted = Buffer.from(this.state.credential.encrypted, 'base64')
       return {

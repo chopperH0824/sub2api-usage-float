@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
-  Activity,
   AlertTriangle,
   ChevronsDownUp,
   ChevronsUpDown,
@@ -186,6 +185,7 @@ function cleanError(value: unknown): string {
 
 function applyTheme(): void {
   document.documentElement.dataset.theme = settings.value.theme
+  document.documentElement.dataset.platform = bootstrap.value?.platform || 'macos'
 }
 
 function scheduleRefresh(): void {
@@ -362,11 +362,12 @@ onBeforeUnmount(() => {
   <div v-else class="app-shell" :class="{ 'is-compact': settings.compactMode }">
     <div v-if="bootstrapping" class="boot-screen">
       <div class="boot-screen__visual" aria-hidden="true">
-        <img src="./assets/boot-orbit.png" alt="" class="boot-screen__orbit" />
-        <img src="./assets/boot-core.png" alt="" class="boot-screen__core" />
+        <div class="boot-screen__trace-mask">
+          <img src="./assets/boot-trace.png" alt="" class="boot-screen__trace" />
+        </div>
       </div>
       <span class="boot-screen__title">Sub2API 用量浮窗</span>
-      <span class="boot-screen__hint">正在同步账号状态</span>
+      <span class="boot-screen__hint"><i aria-hidden="true" />正在同步账号状态</span>
     </div>
 
     <template v-else-if="!connection.connected">
@@ -381,7 +382,7 @@ onBeforeUnmount(() => {
     <template v-else>
       <header class="titlebar">
         <button type="button" class="titlebar__brand no-drag" title="打开 Sub2API 后台" @click="dashboardApi.openServer">
-          <span class="live-mark"><Activity :size="15" :stroke-width="2.2" /></span>
+          <img src="./assets/app-icon.png" alt="" class="titlebar__brand-icon" />
           <span class="titlebar__identity">
             <strong>用量浮窗</strong>
             <small><i />{{ serverHost }}</small>
