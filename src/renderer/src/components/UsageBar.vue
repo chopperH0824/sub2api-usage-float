@@ -47,10 +47,14 @@ const tone = computed(() => {
 <template>
   <div class="usage-window" :class="`usage-window--${tone}`">
     <div class="usage-window__meta">
-      <span class="usage-window__label" :title="window.label">{{ window.label }}</span>
-      <span class="usage-window__detail" :title="detail">{{ detail }}</span>
-      <span class="usage-window__reset">{{ formatResetTime(window.resetAt, now) }}</span>
-      <strong class="usage-window__percent">{{ roundedPercent }}%</strong>
+      <div class="usage-window__title-group">
+        <span class="usage-window__label" :title="window.label">{{ window.label }}</span>
+        <span v-if="detail" class="usage-window__detail" :title="detail">{{ detail }}</span>
+      </div>
+      <div class="usage-window__value-group">
+        <span class="usage-window__reset">{{ formatResetTime(window.resetAt, now) }}</span>
+        <strong class="usage-window__percent">{{ roundedPercent }}%</strong>
+      </div>
     </div>
     <div class="usage-window__track" aria-hidden="true">
       <span class="usage-window__fill" :style="{ width }" />

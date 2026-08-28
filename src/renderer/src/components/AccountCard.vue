@@ -185,26 +185,28 @@ function capacityTone(metric: CapacityMetric): string {
       </button>
     </header>
 
-    <div v-if="capacities.length" class="capacity-strip" aria-label="容量信息">
-      <span
-        v-for="metric in capacities"
-        :key="metric.id"
-        class="capacity-chip"
-        :class="`capacity-chip--${capacityTone(metric)}`"
-        :title="`${metric.label} ${formatCapacityValue(metric)}`"
-      >
-        <component :is="capacityIcon(metric)" :size="12" :stroke-width="2" />
-        <span>{{ metric.label }}</span>
-        <strong>{{ formatCapacityValue(metric) }}</strong>
-      </span>
-    </div>
+    <div v-if="capacities.length || todayItems.length" class="account-card__metrics">
+      <div v-if="capacities.length" class="capacity-strip" aria-label="容量信息">
+        <span
+          v-for="metric in capacities"
+          :key="metric.id"
+          class="capacity-chip"
+          :class="`capacity-chip--${capacityTone(metric)}`"
+          :title="`${metric.label} ${formatCapacityValue(metric)}`"
+        >
+          <component :is="capacityIcon(metric)" :size="12" :stroke-width="2" />
+          <span>{{ metric.label }}</span>
+          <strong>{{ formatCapacityValue(metric) }}</strong>
+        </span>
+      </div>
 
-    <div v-if="todayItems.length" class="today-strip" aria-label="今日统计">
-      <span v-for="entry in todayItems" :key="entry.id" class="today-chip" :title="`${entry.label} ${entry.value}`">
-        <component :is="todayIcon(entry.id)" :size="11" :stroke-width="2" />
-        <span>{{ entry.label }}</span>
-        <strong>{{ entry.value }}</strong>
-      </span>
+      <div v-if="todayItems.length" class="today-strip" aria-label="今日统计">
+        <span v-for="entry in todayItems" :key="entry.id" class="today-chip" :title="`${entry.label} ${entry.value}`">
+          <component :is="todayIcon(entry.id)" :size="11" :stroke-width="2" />
+          <span>{{ entry.label }}</span>
+          <strong>{{ entry.value }}</strong>
+        </span>
+      </div>
     </div>
 
     <div v-if="visibleWindows.length" class="usage-stack">

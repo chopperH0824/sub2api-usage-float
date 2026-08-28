@@ -1,7 +1,7 @@
 :root,
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #f3f5f8;
+  --bg: #f5f7f9;
   --surface: #ffffff;
   --surface-soft: #f8fafc;
   --surface-strong: #edf2f7;
@@ -187,8 +187,8 @@ button {
 
 .titlebar {
   display: flex;
-  height: 52px;
-  flex: 0 0 52px;
+  height: 50px;
+  flex: 0 0 50px;
   align-items: center;
   justify-content: space-between;
   padding: 0 14px;
@@ -205,7 +205,9 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 8px;
+  min-width: 0;
+  max-width: calc(100% - 150px);
+  padding: 4px 6px;
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
@@ -218,8 +220,9 @@ button {
 
 .live-mark {
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
   place-items: center;
   border-radius: 7px;
   background: var(--emerald-soft);
@@ -230,48 +233,58 @@ button {
 .titlebar__identity {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   text-align: left;
   line-height: 1.2;
 }
 
 .titlebar__identity strong {
-  font-size: 14px;
+  overflow: hidden;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .titlebar__identity small {
   display: flex;
   align-items: center;
   gap: 4px;
+  overflow: hidden;
   font-size: 11px;
   color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .titlebar__identity small i {
   width: 5px;
   height: 5px;
+  flex-shrink: 0;
   border-radius: 50%;
   background: var(--emerald);
 }
 
 .titlebar__external {
+  flex-shrink: 0;
   color: var(--faint);
 }
 
 .titlebar__actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  flex-shrink: 0;
 }
 
 .icon-button {
   display: grid;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   place-items: center;
   padding: 0;
-  border-radius: 7px;
+  border-radius: 6px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
@@ -355,9 +368,9 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 8px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 7px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
   color: var(--muted);
@@ -374,7 +387,7 @@ button {
   flex: 1 1 auto;
   background: transparent;
   color: var(--text);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .search-box input::placeholder {
@@ -398,24 +411,24 @@ button {
 .filter-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 .segmented-control {
   display: flex;
   padding: 2px;
-  border-radius: 7px;
+  border-radius: 6px;
   background: var(--surface-strong);
 }
 
 .segmented-control button {
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 4px;
   background: transparent;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 550;
   cursor: pointer;
   transition: all 0.12s ease;
@@ -435,20 +448,20 @@ button {
 .select-shell {
   display: inline-flex;
   align-items: center;
-  height: 32px;
+  height: 30px;
   padding: 0 8px;
-  border-radius: 7px;
+  border-radius: 6px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
 }
 
 .select-shell select {
   background: transparent;
   color: inherit;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
 }
 
@@ -468,24 +481,24 @@ button {
   gap: 12px;
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 14px;
+  padding: 12px 14px;
   background: var(--bg);
 }
 
 .account-list::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .account-list::-webkit-scrollbar-thumb {
-  border-radius: 6px;
+  border-radius: 5px;
   background: var(--line-strong);
 }
 
 .account-card {
   display: flex;
   flex-direction: column;
-  padding: 14px 16px;
-  border-radius: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
   background: var(--surface);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-sm);
@@ -503,16 +516,16 @@ button {
 .account-card__header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .provider-mark {
   display: grid;
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
   place-items: center;
-  border-radius: 9px;
+  border-radius: 8px;
   background: var(--surface-strong);
   border: 1px solid var(--line);
   color: var(--text-soft);
@@ -536,13 +549,13 @@ button {
 .account-card__name-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .account-card__name {
   margin: 0;
   overflow: hidden;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 650;
   color: var(--text);
   text-overflow: ellipsis;
@@ -551,23 +564,23 @@ button {
 
 .status-label {
   display: inline-flex;
-  height: 22px;
+  height: 20px;
   flex: 0 0 auto;
   align-items: center;
-  gap: 5px;
-  padding: 0 8px;
-  border-radius: 6px;
+  gap: 4px;
+  padding: 0 6px;
+  border-radius: 5px;
   background: var(--surface-strong);
   border: 1px solid var(--line);
   color: var(--muted);
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 600;
   white-space: nowrap;
 }
 
 .status-label i {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: currentColor;
 }
@@ -578,10 +591,10 @@ button {
 .status-label--offline { background: var(--red-soft); color: var(--red); border-color: var(--red-border); }
 
 .account-card__subtitle {
-  margin: 3px 0 0;
+  margin: 2px 0 0;
   overflow: hidden;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -589,11 +602,12 @@ button {
 
 .account-card__float-button {
   display: grid;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
   place-items: center;
   padding: 0;
-  border-radius: 7px;
+  border-radius: 6px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
   color: var(--muted);
@@ -612,24 +626,30 @@ button {
   border-color: var(--blue-border);
 }
 
-/* Capacities & Today Strips */
+/* Metrics Section & Chips */
+.account-card__metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .capacity-strip,
 .today-strip {
   display: flex;
   min-width: 0;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 5px;
 }
 
 .capacity-chip,
 .today-chip {
   display: inline-flex;
-  height: 24px;
+  height: 22px;
   align-items: center;
-  gap: 5px;
-  padding: 0 8px;
-  border-radius: 6px;
+  gap: 4px;
+  padding: 0 7px;
+  border-radius: 5px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
   color: var(--muted);
@@ -657,8 +677,8 @@ button {
 /* Usage Progress Stack */
 .usage-stack {
   display: grid;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .usage-window {
@@ -666,29 +686,43 @@ button {
 }
 
 .usage-window__meta {
-  display: grid;
-  grid-template-columns: minmax(76px, auto) minmax(0, 1fr) auto 46px;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  margin-bottom: 5px;
-  font-size: 12px;
+  margin-bottom: 3px;
+  font-size: 11px;
   line-height: 1.2;
 }
 
-.usage-window__label {
+.usage-window__title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
   overflow: hidden;
+}
+
+.usage-window__label {
+  flex-shrink: 0;
   color: var(--text-soft);
   font-weight: 650;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .usage-window__detail {
   overflow: hidden;
   color: var(--faint);
-  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.usage-window__value-group {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .usage-window__reset {
@@ -699,9 +733,10 @@ button {
 
 .usage-window__percent {
   color: var(--emerald);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  min-width: 32px;
   text-align: right;
 }
 
@@ -709,7 +744,7 @@ button {
 .usage-window--danger .usage-window__percent { color: var(--red); }
 
 .usage-window__track {
-  height: 7px;
+  height: 6px;
   overflow: hidden;
   border-radius: 999px;
   background: var(--track);
@@ -729,20 +764,20 @@ button {
 .account-card__empty-window {
   display: flex;
   justify-content: space-between;
-  margin-top: 10px;
-  padding: 8px 10px;
-  border-radius: 6px;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border-radius: 5px;
   background: var(--surface-soft);
   color: var(--faint);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .account-card__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 10px;
-  padding-top: 8px;
+  margin-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid var(--line);
   color: var(--faint);
   font-size: 11px;
@@ -751,12 +786,12 @@ button {
 .sample-state {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 
 .sample-state i {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--emerald);
 }
@@ -769,8 +804,8 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 8px;
-  border-radius: 5px;
+  padding: 3px 6px;
+  border-radius: 4px;
   background: var(--surface-soft);
   color: var(--muted);
   font-size: 11px;
@@ -793,7 +828,7 @@ button {
   height: 100%;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--float-bg);
   backdrop-filter: blur(28px) saturate(1.6);
   -webkit-backdrop-filter: blur(28px) saturate(1.6);
@@ -803,22 +838,22 @@ button {
 
 .account-float__titlebar {
   display: flex;
-  height: 46px;
-  flex: 0 0 46px;
+  height: 44px;
+  flex: 0 0 44px;
   align-items: center;
-  gap: 10px;
-  padding: 0 10px 0 12px;
+  gap: 8px;
+  padding: 0 8px 0 10px;
   border-bottom: 1px solid var(--float-line);
   -webkit-app-region: drag;
 }
 
 .account-float__provider {
   display: grid;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
   place-items: center;
-  border-radius: 7px;
+  border-radius: 6px;
   background: var(--surface-strong);
   color: var(--text-soft);
 }
@@ -828,19 +863,35 @@ button {
   flex: 1 1 auto;
 }
 
+.account-float__identity > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .account-float__identity strong {
-  display: block;
   overflow: hidden;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 650;
   color: var(--text);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.account-float__status {
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.account-float__status--healthy { color: var(--emerald); }
+.account-float__status--warning { color: var(--amber); }
+.account-float__status--danger,
+.account-float__status--offline { color: var(--red); }
+
 .account-float__identity small {
   display: block;
-  margin-top: 1px;
   overflow: hidden;
   font-size: 11px;
   color: var(--muted);
@@ -852,16 +903,17 @@ button {
   display: flex;
   align-items: center;
   gap: 2px;
+  flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
 
 .account-float__actions button {
   display: grid;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   place-items: center;
   padding: 0;
-  border-radius: 6px;
+  border-radius: 5px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
@@ -883,10 +935,10 @@ button {
   min-height: 0;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 10px 12px;
+  padding: 8px 10px;
 }
 
 .account-float__content::-webkit-scrollbar {
@@ -900,15 +952,15 @@ button {
 
 .account-float__usage {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .account-float__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding-top: 8px;
+  gap: 6px;
+  padding-top: 6px;
   border-top: 1px solid var(--float-line);
   color: var(--faint);
   font-size: 11px;
@@ -917,7 +969,7 @@ button {
 .account-float__facts {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 8px;
+  gap: 3px 6px;
 }
 
 .account-float__facts > span {
@@ -928,6 +980,76 @@ button {
 .account-float__facts strong {
   color: var(--text-soft);
   font-weight: 600;
+}
+
+.account-float__settings {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 8px 10px;
+}
+
+.account-float__settings::-webkit-scrollbar {
+  width: 4px;
+}
+
+.account-float__settings::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: var(--line-strong);
+}
+
+.account-float__settings-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+}
+
+.account-float__range {
+  display: grid;
+  grid-template-columns: 46px 1fr 34px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-soft);
+}
+
+.account-float__range input {
+  accent-color: var(--emerald);
+  cursor: pointer;
+}
+
+.account-float__range strong {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.account-float__setting-row {
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-soft);
+}
+
+.account-float__sizes {
+  width: 100%;
+}
+
+.account-float__sizes button {
+  flex: 1 1 0;
+  height: 24px;
+  padding: 0;
+  font-size: 11px;
 }
 
 .account-float__resize-corner {
@@ -944,70 +1066,22 @@ button {
 }
 
 /* ==========================================================================
-   SETTINGS MODAL & FIELD PICKER
+   FIELD PICKER (COMPACT & FULL)
    ========================================================================== */
-.settings-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--overlay);
-  backdrop-filter: blur(4px);
-}
-
-.settings-card {
-  display: flex;
-  width: 90%;
-  max-width: 420px;
-  max-height: 85vh;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: 14px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow-lg);
-}
-
-.settings-card__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
-}
-
-.settings-card__header h2 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.settings-card__body {
-  display: flex;
-  min-height: 0;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: 14px;
-  overflow-y: auto;
-  padding: 16px;
-}
-
 .field-picker {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .field-picker__toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 6px;
+  gap: 6px;
+  padding: 2px 0 4px;
   border-bottom: 1px solid var(--line);
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
 }
 
@@ -1015,13 +1089,16 @@ button {
   color: var(--text);
 }
 
-.field-picker__actions {
+.field-picker__toolbar > div {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
-.field-picker__actions button {
-  padding: 4px 8px;
+.field-picker__toolbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
   border-radius: 5px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
@@ -1032,27 +1109,27 @@ button {
   transition: all 0.12s ease;
 }
 
-.field-picker__actions button:hover {
+.field-picker__toolbar button:hover {
   background: var(--surface-strong);
   color: var(--text);
 }
 
 .field-picker__group {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 7px;
   overflow: hidden;
 }
 
 .field-picker__group-toggle {
   display: flex;
   width: 100%;
-  height: 32px;
+  height: 28px;
   align-items: center;
   justify-content: space-between;
-  padding: 0 10px;
+  padding: 0 8px;
   background: var(--surface-soft);
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -1060,23 +1137,31 @@ button {
 .field-picker__options {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-  padding: 8px 10px;
+  gap: 4px 6px;
+  padding: 6px 8px;
   background: var(--surface);
 }
 
 .field-picker__option {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 6px;
+  font-size: 11px;
   color: var(--text-soft);
   cursor: pointer;
+  min-width: 0;
+}
+
+.field-picker__option span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .field-picker__option input[type="checkbox"] {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
   accent-color: var(--blue);
   cursor: pointer;
 }
@@ -1086,8 +1171,8 @@ button {
    ========================================================================== */
 .statusbar {
   display: flex;
-  height: 32px;
-  flex: 0 0 32px;
+  height: 30px;
+  flex: 0 0 30px;
   align-items: center;
   justify-content: space-between;
   padding: 0 14px;
@@ -1104,8 +1189,8 @@ button {
 }
 
 .statusbar span i {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--emerald);
 }
@@ -1114,10 +1199,10 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px;
+  padding: 6px 14px;
   background: var(--red-soft);
   color: var(--red);
-  font-size: 12px;
+  font-size: 11px;
   border-bottom: 1px solid var(--red-border);
 }
 
@@ -1139,17 +1224,17 @@ button {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 40px 20px;
+  padding: 30px 20px;
   color: var(--muted);
 }
 
 .text-button {
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 3px 8px;
+  border-radius: 5px;
   background: var(--surface);
   border: 1px solid var(--line);
   color: var(--blue);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
 }
