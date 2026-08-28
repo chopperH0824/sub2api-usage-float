@@ -79,6 +79,7 @@
     },
     "win": {
       "icon": "build/icon.ico",
+      "executableName": "Sub2API-Usage-Float",
       "target": [
         "nsis",
         "zip"
