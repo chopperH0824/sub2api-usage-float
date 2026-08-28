@@ -137,8 +137,8 @@ describe('AccountFloatManager', () => {
     expect(opened.open).toBe(true)
     expect(manager.windowCount).toBe(1)
     expect(target.options).toMatchObject({
-      width: 260,
-      height: 126,
+      width: 320,
+      height: 172,
       transparent: true,
       frame: false,
       backgroundColor: '#00000000'
@@ -155,7 +155,7 @@ describe('AccountFloatManager', () => {
     expect(updated).toMatchObject({ opacity: 0.61, alwaysOnTop: false, size: 'large' })
     expect(target.opacity).toBe(0.61)
     expect(target.alwaysOnTop).toBe(false)
-    expect(target.bounds).toMatchObject({ width: 380, height: 420 })
+    expect(target.bounds).toMatchObject({ width: 440, height: 480 })
 
     const snapshot: DashboardSnapshot = {
       accounts: [{

@@ -2,9 +2,9 @@ import type { AccountFloatPreference, AccountFloatSize } from './types'
 import { DEFAULT_FLOAT_DISPLAY_FIELDS } from './display-fields'
 
 export const ACCOUNT_FLOAT_DIMENSIONS: Record<AccountFloatSize, { width: number; height: number }> = {
-  small: { width: 260, height: 126 },
-  medium: { width: 320, height: 230 },
-  large: { width: 380, height: 420 }
+  small: { width: 320, height: 172 },
+  medium: { width: 380, height: 280 },
+  large: { width: 440, height: 480 }
 }
 
 export const DEFAULT_ACCOUNT_FLOAT: AccountFloatPreference = {
