@@ -3,8 +3,12 @@
   "version": "0.8.0",
   "private": true,
   "description": "Sub2API account usage desktop floating dashboard",
+  "desktopName": "io.github.chopperh0824.sub2api-usage-float.desktop",
   "main": "./out/main/index.js",
-  "author": "Qiangbin Hu",
+  "author": {
+    "name": "Qiangbin Hu",
+    "email": "129704992+chopperH0824@users.noreply.github.com"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -19,9 +23,9 @@
     "dev": "electron-vite dev",
     "dev:web": "vite --config vite.web.config.ts",
     "build": "npm run typecheck && electron-vite build",
-    "build:mac": "npm run build && electron-builder --mac --arm64",
-    "build:win": "npm run build && electron-builder --win --x64",
-    "build:linux": "npm run build && electron-builder --linux --x64",
+    "build:mac": "npm run build && electron-builder --mac --arm64 --publish never",
+    "build:win": "npm run build && electron-builder --win --x64 --publish never",
+    "build:linux": "npm run build && electron-builder --linux --x64 --publish never",
     "preview": "electron-vite preview",
     "typecheck": "vue-tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
@@ -91,6 +95,7 @@
       "icon": "build/icons",
       "category": "Utility",
       "executableName": "sub2api-usage-float",
+      "syncDesktopName": true,
       "synopsis": "Sub2API 账号用量桌面看板",
       "target": [
         "AppImage",
