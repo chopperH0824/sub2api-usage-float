@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import {
+  ChartColumn,
   CheckCheck,
   CircleDollarSign,
-  Layers,
   LayoutDashboard,
+  Network,
   RotateCcw,
-  Sparkles,
   Square,
   Zap
 } from '@lucide/vue'
@@ -41,8 +41,8 @@ const presetIcons: Record<string, unknown> = {
   Zap,
   LayoutDashboard,
   CircleDollarSign,
-  Sparkles,
-  Layers
+  Network,
+  ChartColumn
 }
 
 function getPresetIcon(name: string): unknown {

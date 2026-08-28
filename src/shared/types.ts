@@ -21,23 +21,16 @@ export type DisplayFieldId =
   | 'capacity-daily'
   | 'capacity-weekly'
   | 'capacity-total'
-  | 'account-identity'
   | 'account-subscription'
   | 'account-scheduling'
   | 'account-groups'
   | 'account-notes'
-  | 'account-lifecycle'
   | 'account-cooldowns'
-  | 'account-session-policy'
-  | 'account-quota-policy'
   | 'account-routing'
-  | 'account-features'
   | 'usage-health'
-  | 'antigravity-details'
   | 'ai-credits'
   | 'grok-details'
   | 'ollama-details'
-  | 'extension-fields'
 
 export interface WindowBounds {
   x?: number
@@ -492,6 +485,10 @@ export interface AccountDetailItem {
   label: string
   value: string
   tone?: 'neutral' | 'good' | 'warning' | 'danger'
+  kind?: 'metric' | 'status' | 'progress' | 'ranking' | 'timeline' | 'note' | 'tags'
+  meta?: string
+  progress?: number
+  tags?: string[]
 }
 
 export interface AccountDetailGroup {

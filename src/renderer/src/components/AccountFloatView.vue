@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Settings2,
   Sparkles,
+  TriangleAlert,
   X
 } from '@lucide/vue'
 import { DEFAULT_ACCOUNT_FLOAT } from '@shared/account-floats'
@@ -346,7 +347,10 @@ onBeforeUnmount(() => {
     <template v-else>
       <div v-if="loading" class="account-float__loading"><span class="spinner" /></div>
       <div v-else-if="account" class="account-float__content">
-        <p v-if="accountMessage" class="account-float__message" :title="accountMessage">{{ accountMessage }}</p>
+        <div v-if="accountMessage" class="account-float__message" role="alert" :title="accountMessage">
+          <TriangleAlert :size="12" :stroke-width="2" />
+          <span>{{ accountMessage }}</span>
+        </div>
 
         <div v-if="visibleWindows.length" class="account-float__usage">
           <UsageBar

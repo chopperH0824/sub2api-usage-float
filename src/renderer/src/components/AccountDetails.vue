@@ -1,6 +1,24 @@
 <script setup lang="ts">
-import { Database, ChevronDown } from '@lucide/vue'
+import {
+  BadgeCheck,
+  CalendarDays,
+  ChartNoAxesCombined,
+  ChevronDown,
+  CircleDollarSign,
+  Cloud,
+  Cpu,
+  Gauge,
+  Network,
+  PanelsTopLeft,
+  Radar,
+  Route,
+  ShieldCheck,
+  StickyNote,
+  TimerReset,
+  UsersRound
+} from '@lucide/vue'
 import type { AccountDetailGroup } from '@shared/types'
+import AccountDetailVisual from './AccountDetailVisual.vue'
 
 withDefaults(defineProps<{
   groups: AccountDetailGroup[]
@@ -8,6 +26,27 @@ withDefaults(defineProps<{
 }>(), {
   compact: false
 })
+
+const groupIcons: Record<string, unknown> = {
+  'period-summary': ChartNoAxesCombined,
+  'period-history': CalendarDays,
+  'period-models': Cpu,
+  'period-endpoints': Route,
+  'account-subscription': BadgeCheck,
+  'account-scheduling': Gauge,
+  'account-groups': UsersRound,
+  'account-notes': StickyNote,
+  'account-cooldowns': TimerReset,
+  'account-routing': Network,
+  'usage-health': ShieldCheck,
+  'ai-credits': CircleDollarSign,
+  'grok-details': Radar,
+  'ollama-details': Cloud
+}
+
+function groupIcon(id: string): unknown {
+  return groupIcons[id] || PanelsTopLeft
+}
 </script>
 
 <template>
@@ -16,24 +55,25 @@ withDefaults(defineProps<{
       v-for="(group, index) in groups"
       :key="group.id"
       class="account-details__group"
-      :open="!compact || index === 0"
+      :open="index === 0"
     >
       <summary>
-        <span><Database :size="compact ? 10 : 12" />{{ group.label }}</span>
-        <small>{{ group.items.length }}</small>
-        <ChevronDown :size="compact ? 10 : 12" />
+        <span class="account-details__group-icon" aria-hidden="true">
+          <component :is="groupIcon(group.id)" :size="compact ? 12 : 14" :stroke-width="1.9" />
+        </span>
+        <span class="account-details__group-copy">
+          <strong>{{ group.label }}</strong>
+          <small>{{ group.items.length }} 项有效数据</small>
+        </span>
+        <ChevronDown :size="compact ? 12 : 14" class="account-details__chevron" />
       </summary>
       <div class="account-details__items">
-        <div
+        <AccountDetailVisual
           v-for="entry in group.items"
           :key="entry.id"
-          class="account-details__item"
-          :class="entry.tone ? `is-${entry.tone}` : ''"
-          :title="`${entry.label}: ${entry.value}`"
-        >
-          <span>{{ entry.label }}</span>
-          <strong>{{ entry.value }}</strong>
-        </div>
+          :entry="entry"
+          :compact="compact"
+        />
       </div>
     </details>
   </div>

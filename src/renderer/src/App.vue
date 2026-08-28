@@ -5,17 +5,17 @@ import {
   AlertTriangle,
   ChevronsDownUp,
   ChevronsUpDown,
+  ChartColumn,
   CircleCheck,
   CircleDollarSign,
   ExternalLink,
-  Layers,
   LayoutDashboard,
+  Network,
   Pin,
   RefreshCw,
   Search,
   Settings,
   SlidersHorizontal,
-  Sparkles,
   Unplug,
   X,
   Zap
@@ -295,8 +295,8 @@ const presetIcons: Record<string, unknown> = {
   Zap,
   LayoutDashboard,
   CircleDollarSign,
-  Sparkles,
-  Layers
+  Network,
+  ChartColumn
 }
 
 function getPresetIcon(name: string): unknown {

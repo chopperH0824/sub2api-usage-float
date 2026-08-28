@@ -17,6 +17,7 @@ import {
   PictureInPicture2,
   Radar,
   Sparkles,
+  TriangleAlert,
   UsersRound,
   Zap
 } from '@lucide/vue'
@@ -245,6 +246,9 @@ function capacityTone(metric: CapacityMetric): string {
       </button>
     </footer>
 
-    <p v-if="cardMessage" class="account-card__message" :title="cardMessage">{{ cardMessage }}</p>
+    <div v-if="cardMessage" class="account-card__message" role="alert" :title="cardMessage">
+      <TriangleAlert :size="13" :stroke-width="2" />
+      <span>{{ cardMessage }}</span>
+    </div>
   </article>
 </template>

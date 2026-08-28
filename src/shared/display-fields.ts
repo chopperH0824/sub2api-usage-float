@@ -14,19 +14,32 @@ export interface DisplayFieldGroup {
 
 export const DISPLAY_FIELD_GROUPS: readonly DisplayFieldGroup[] = [
   {
-    id: 'realtime',
-    label: '实时额度',
+    id: 'quota',
+    label: '额度与容量',
     options: [
       { id: 'usage-windows', label: '额度窗口', description: '5H、7D、月额度及平台模型额度' },
       { id: 'window-requests', label: '窗口请求', description: '窗口内请求数或请求配额' },
       { id: 'window-tokens', label: '窗口 Token', description: '窗口内 Token 用量' },
       { id: 'window-costs', label: '窗口成本', description: '标准、账号和用户成本' },
-      { id: 'usage-sample', label: '采样状态', description: '主动/被动采样及更新时间' }
+      { id: 'capacity-daily', label: '日容量', description: '日配额已用与上限' },
+      { id: 'capacity-weekly', label: '周容量', description: '周配额已用与上限' },
+      { id: 'capacity-total', label: '总容量', description: '账号总配额已用与上限' }
+    ]
+  },
+  {
+    id: 'load',
+    label: '实时负载',
+    options: [
+      { id: 'capacity-concurrency', label: '并发', description: '当前并发与账号上限' },
+      { id: 'capacity-rpm', label: 'RPM', description: '当前分钟请求数与上限' },
+      { id: 'capacity-sessions', label: '活跃会话', description: '活跃会话数与上限' },
+      { id: 'capacity-window-cost', label: '窗口费用', description: '当前窗口费用与限制' },
+      { id: 'usage-sample', label: '更新时间', description: '用量采样来源及最后更新时间' }
     ]
   },
   {
     id: 'today',
-    label: '今日统计',
+    label: '今日消耗',
     options: [
       { id: 'today-requests', label: '今日请求', description: 'Sub2API 今日请求总数' },
       { id: 'today-tokens', label: '今日 Token', description: 'Sub2API 今日 Token 总数' },
@@ -35,54 +48,34 @@ export const DISPLAY_FIELD_GROUPS: readonly DisplayFieldGroup[] = [
   },
   {
     id: 'period',
-    label: '30 天统计',
+    label: '趋势与归因',
     options: [
-      { id: 'period-summary', label: '汇总与日均', description: '请求、Token、成本、时延和峰值日' },
-      { id: 'period-history', label: '每日历史', description: '最近 30 天逐日统计' },
-      { id: 'period-models', label: '模型明细', description: '按模型统计请求、Token 和成本' },
-      { id: 'period-endpoints', label: '接口明细', description: '客户端与上游接口统计' }
-    ]
-  },
-  {
-    id: 'capacity',
-    label: '容量与限制',
-    options: [
-      { id: 'capacity-concurrency', label: '并发', description: '当前并发与账号上限' },
-      { id: 'capacity-rpm', label: 'RPM', description: '当前分钟请求数与上限' },
-      { id: 'capacity-sessions', label: '活跃会话', description: '活跃会话数与上限' },
-      { id: 'capacity-window-cost', label: '窗口费用', description: '当前窗口费用与限制' },
-      { id: 'capacity-daily', label: '日容量', description: '日配额已用与上限' },
-      { id: 'capacity-weekly', label: '周容量', description: '周配额已用与上限' },
-      { id: 'capacity-total', label: '总容量', description: '账号总配额已用与上限' }
+      { id: 'period-summary', label: '30 天汇总', description: '请求、Token、成本、时延和峰值日' },
+      { id: 'period-history', label: '每日趋势', description: '最近 30 天逐日消耗趋势' },
+      { id: 'period-models', label: '模型排行', description: '按模型归因请求、Token 和成本' },
+      { id: 'period-endpoints', label: '接口排行', description: '客户端与上游接口消耗归因' }
     ]
   },
   {
     id: 'account',
-    label: '账号与调度',
+    label: '调度与账号',
     options: [
-      { id: 'account-identity', label: '账号标识', description: 'ID、平台、类型和脱敏账号信息' },
-      { id: 'account-subscription', label: '订阅套餐', description: '套餐、父账号和订阅到期信息' },
-      { id: 'account-scheduling', label: '调度信息', description: '优先级、负载、倍率和调度分' },
+      { id: 'account-subscription', label: '订阅套餐', description: '套餐、母账号和订阅到期信息' },
+      { id: 'account-scheduling', label: '调度状态', description: '可调度性、优先级、负载和调度分' },
       { id: 'account-groups', label: '账号分组', description: '所属分组及组内优先级' },
-      { id: 'account-notes', label: '备注', description: '账号备注' },
-      { id: 'account-lifecycle', label: '生命周期', description: '创建、更新、调用和到期时间' },
-      { id: 'account-cooldowns', label: '限流与冷却', description: '限流、过载和临时不可调度状态' },
-      { id: 'account-session-policy', label: '会话策略', description: '窗口、会话、RPM 和队列策略' },
-      { id: 'account-quota-policy', label: '配额策略', description: '重置周期、时区和通知阈值' },
-      { id: 'account-routing', label: '代理与影子账号', description: '代理、回退、父账号和配额维度' },
-      { id: 'account-features', label: '高级能力', description: 'TLS、会话掩码、缓存 TTL 和凭据状态' }
+      { id: 'account-notes', label: '运维备注', description: '账号备注与使用说明' },
+      { id: 'account-cooldowns', label: '限流与冷却', description: '限流、过载和临时暂停原因' },
+      { id: 'account-routing', label: '路由与代理', description: '代理状态、回退来源和母账号关系' }
     ]
   },
   {
-    id: 'platform',
-    label: '平台详情',
+    id: 'health',
+    label: '健康与平台',
     options: [
-      { id: 'usage-health', label: '上游健康', description: '错误码、封禁、验证和重新授权状态' },
-      { id: 'antigravity-details', label: '模型能力', description: 'Antigravity 模型能力与转发规则' },
-      { id: 'ai-credits', label: 'AI Credits', description: 'Antigravity Credits 余额' },
-      { id: 'grok-details', label: 'Grok 详情', description: '配额、探测、本地用量和账单' },
-      { id: 'ollama-details', label: 'Ollama 详情', description: '计划、余额、模型和采样状态' },
-      { id: 'extension-fields', label: '扩展字段', description: 'Sub2API 返回的其他非敏感字段' }
+      { id: 'usage-health', label: '上游健康', description: '只展示需要处理的验证、封禁和授权异常' },
+      { id: 'ai-credits', label: 'AI Credits', description: 'Antigravity Credits 余额与最低保留值' },
+      { id: 'grok-details', label: 'Grok 配额与账单', description: '请求、Token、周期用量和费用' },
+      { id: 'ollama-details', label: 'Ollama 用量', description: '套餐、余额、模型请求和异常' }
     ]
   }
 ]
@@ -116,8 +109,8 @@ export const DEFAULT_DISPLAY_FIELDS: readonly DisplayFieldId[] = [
   'capacity-daily',
   'capacity-weekly',
   'capacity-total',
-  'account-subscription',
-  'account-cooldowns'
+  'account-cooldowns',
+  'usage-health'
 ]
 
 const displayFieldSet = new Set<string>(ALL_DISPLAY_FIELDS)
@@ -160,20 +153,20 @@ export const DISPLAY_PRESETS: readonly DisplayPreset[] = [
     id: 'minimal',
     label: '极简',
     iconName: 'Zap',
-    description: '仅看实时额度窗口与并发状态，超省空间',
+    description: '只看实时额度、并发和需要处理的异常',
     fields: [
       'usage-windows',
-      'usage-sample',
-      'capacity-concurrency'
+      'capacity-concurrency',
+      'usage-health'
     ],
     dashboardSize: { width: 420, height: 560 },
     floatSize: 'small'
   },
   {
     id: 'standard',
-    label: '标准',
+    label: '日常',
     iconName: 'LayoutDashboard',
-    description: '核心额度、今日请求/Token、并发与容量限制',
+    description: '核心额度、今日消耗、实时负载与健康状态',
     fields: [...DEFAULT_DISPLAY_FIELDS],
     dashboardSize: { width: 468, height: 760 },
     floatSize: 'medium'
@@ -182,7 +175,7 @@ export const DISPLAY_PRESETS: readonly DisplayPreset[] = [
     id: 'costs',
     label: '成本',
     iconName: 'CircleDollarSign',
-    description: '聚焦窗口成本、今日成本、30天历史与模型明细',
+    description: '聚焦窗口成本、今日成本、趋势、模型和平台账单',
     fields: [
       'usage-windows',
       'window-costs',
@@ -195,36 +188,58 @@ export const DISPLAY_PRESETS: readonly DisplayPreset[] = [
       'capacity-window-cost',
       'capacity-daily',
       'capacity-weekly',
-      'capacity-total'
+      'capacity-total',
+      'ai-credits',
+      'grok-details',
+      'ollama-details'
     ],
     dashboardSize: { width: 520, height: 820 },
     floatSize: 'large'
   },
   {
-    id: 'platform',
-    label: '平台',
-    iconName: 'Sparkles',
-    description: '聚焦各平台专属配额、AI Credits与模型能力',
+    id: 'operations',
+    label: '调度',
+    iconName: 'Network',
+    description: '聚焦并发、调度、分组、冷却、代理与上游异常',
     fields: [
       'usage-windows',
       'usage-sample',
       'capacity-concurrency',
-      'antigravity-details',
+      'capacity-rpm',
+      'capacity-sessions',
+      'account-scheduling',
+      'account-groups',
+      'account-notes',
+      'account-cooldowns',
+      'account-routing',
+      'usage-health'
+    ],
+    dashboardSize: { width: 500, height: 800 },
+    floatSize: 'large'
+  },
+  {
+    id: 'insights',
+    label: '分析',
+    iconName: 'ChartColumn',
+    description: '趋势、模型与接口归因，兼顾平台账单信息',
+    fields: [
+      'usage-windows',
+      'window-requests',
+      'window-tokens',
+      'window-costs',
+      'today-requests',
+      'today-tokens',
+      'today-costs',
+      'period-summary',
+      'period-history',
+      'period-models',
+      'period-endpoints',
+      'account-subscription',
       'ai-credits',
       'grok-details',
       'ollama-details',
-      'extension-fields',
       'usage-health'
     ],
-    dashboardSize: { width: 480, height: 780 },
-    floatSize: 'medium'
-  },
-  {
-    id: 'expert',
-    label: '全能',
-    iconName: 'Layers',
-    description: '全选 36 项：调度分、代理、影子账号、全量详情',
-    fields: [...ALL_DISPLAY_FIELDS],
     dashboardSize: { width: 580, height: 900 },
     floatSize: 'large'
   }

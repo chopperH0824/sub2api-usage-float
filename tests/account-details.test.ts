@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { getAccountDetailGroups, getTodayDisplayItems } from '../src/shared/account-details'
-import { ALL_DISPLAY_FIELDS } from '../src/shared/display-fields'
+import {
+  ALL_DISPLAY_FIELDS,
+  DISPLAY_FIELD_GROUPS,
+  normalizeDisplayFields
+} from '../src/shared/display-fields'
 import type { AccountUsageInfo, AccountUsageStatsResponse, Sub2ApiAccount } from '../src/shared/types'
 
 const account: Sub2ApiAccount = {
@@ -40,6 +44,7 @@ const usage: AccountUsageInfo = {
   source: 'active',
   updated_at: '2026-08-27T04:00:00Z',
   subscription_tier: 'TEAM',
+  needs_reauth: true,
   ai_credits: [{ credit_type: 'monthly', amount: 500, minimum_balance: 50 }],
   grok_local_usage_24h: { requests: 12, tokens: 34000, cost: 1.2, standard_cost: 1.4, user_cost: 1.6 }
 }
@@ -85,25 +90,56 @@ const stats: AccountUsageStatsResponse = {
 }
 
 describe('account display details', () => {
-  it('renders every selected safe data group and filters credential-like extensions', () => {
+  it('keeps only actionable groups and emits structured visual data', () => {
     const groups = getAccountDetailGroups(account, usage, stats, [...ALL_DISPLAY_FIELDS])
     const labels = groups.map((group) => group.label)
     const rendered = JSON.stringify(groups)
-    const extensions = JSON.stringify(groups.find((group) => group.id === 'extension-fields'))
+    const history = groups.find((group) => group.id === 'period-history')
+    const models = groups.find((group) => group.id === 'period-models')
+    const health = groups.find((group) => group.id === 'usage-health')
 
-    expect(labels).toContain('30 天汇总')
-    expect(labels).toContain('每日历史')
-    expect(labels).toContain('模型明细')
-    expect(labels).toContain('接口明细')
-    expect(labels).toContain('账号标识')
+    expect(labels).toContain('30 天概览')
+    expect(labels).toContain('每日趋势')
+    expect(labels).toContain('模型消耗排行')
+    expect(labels).toContain('接口消耗排行')
     expect(labels).toContain('AI Credits')
-    expect(rendered).toContain('privacy_mode')
-    expect(rendered).toContain('sample_count')
+    expect(labels).not.toContain('账号标识')
+    expect(labels).not.toContain('扩展字段')
     expect(rendered).not.toContain('must-not-render')
-    expect(extensions).not.toContain('access_token')
-    expect(extensions).not.toContain('api_key')
-    expect(extensions).not.toContain('service_account_json')
-    expect(extensions).not.toContain('cookie')
+    expect(rendered).not.toContain('privacy_mode')
+    expect(rendered).not.toContain('sample_count')
+    expect(rendered).not.toContain('访问令牌')
+    expect(history?.items[0]).toMatchObject({ kind: 'ranking' })
+    expect(history?.items[0].progress).toBeTypeOf('number')
+    expect(models?.items[0]).toMatchObject({ kind: 'ranking', label: 'gpt-5.6' })
+    expect(health?.items).toEqual([
+      expect.objectContaining({ id: 'health-reauth', kind: 'status', tone: 'danger' })
+    ])
+  })
+
+  it('drops retired implementation fields from saved selections', () => {
+    const optionIds = DISPLAY_FIELD_GROUPS.flatMap((group) => group.options.map((option) => option.id))
+    const normalized = normalizeDisplayFields([
+      'usage-windows',
+      'account-features',
+      'extension-fields',
+      'antigravity-details'
+    ])
+
+    expect(ALL_DISPLAY_FIELDS).toHaveLength(29)
+    expect(optionIds).toEqual(ALL_DISPLAY_FIELDS)
+    expect(normalized).toEqual(['usage-windows'])
+  })
+
+  it('omits healthy upstream noise from account details', () => {
+    const groups = getAccountDetailGroups(
+      account,
+      { source: 'active', updated_at: '2026-08-27T04:00:00Z' },
+      null,
+      ['usage-health']
+    )
+
+    expect(groups).toEqual([])
   })
 
   it('builds granular today items from only the selected fields', () => {
